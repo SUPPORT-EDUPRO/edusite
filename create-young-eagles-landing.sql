@@ -1,0 +1,52 @@
+-- Create landing page for Young Eagles Preschool with actual content
+INSERT INTO organization_landing_pages (
+  organization_id,
+  hero_title,
+  hero_subtitle,
+  hero_cta_text,
+  hero_cta_link,
+  meta_title,
+  meta_description,
+  stats,
+  show_programs,
+  show_testimonials,
+  show_gallery,
+  show_stats,
+  show_contact,
+  published,
+  created_at,
+  updated_at
+) VALUES (
+  '6b92f8a5-48e7-4865-b85f-4b92c174e0ef',
+  'Welcome to Young Eagles Day Care',
+  'Where learning meets love. We nurture little minds with big dreams through play, care, and creativity with cutting-edge Society 5.0 integration.',
+  'Register for 2026',
+  '/register',
+  'Young Eagles Education Platform - Premium Daycare & Early Learning',
+  'Award-winning daycare and early learning center featuring Society 5.0 integration, STEM programs, and comprehensive child development for ages 6 months to 6 years.',
+  '{"happy_children": 200, "years_experience": 15, "expert_staff": 10, "parent_satisfaction": 98}'::jsonb,
+  true,
+  true,
+  true,
+  true,
+  true,
+  true,
+  NOW(),
+  NOW()
+)
+ON CONFLICT (organization_id) 
+DO UPDATE SET
+  hero_title = EXCLUDED.hero_title,
+  hero_subtitle = EXCLUDED.hero_subtitle,
+  hero_cta_text = EXCLUDED.hero_cta_text,
+  hero_cta_link = EXCLUDED.hero_cta_link,
+  meta_title = EXCLUDED.meta_title,
+  meta_description = EXCLUDED.meta_description,
+  stats = EXCLUDED.stats,
+  show_programs = EXCLUDED.show_programs,
+  show_testimonials = EXCLUDED.show_testimonials,
+  show_gallery = EXCLUDED.show_gallery,
+  show_stats = EXCLUDED.show_stats,
+  show_contact = EXCLUDED.show_contact,
+  published = EXCLUDED.published,
+  updated_at = NOW();

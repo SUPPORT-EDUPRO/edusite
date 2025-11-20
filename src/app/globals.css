@@ -1,0 +1,87 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+
+/**
+ * EduSitePro Brand Color Palette - Warm Neutral Theme
+ * Professional, stylish, education-focused design
+ * 
+ * Primary Brand: Stone (warm gray-brown)
+ * Accent: Amber & Terracotta  
+ * Supporting: Warm neutrals
+ */
+
+:root {
+  /* Legacy variables */
+  --background: #fafaf9;
+  --foreground: #1c1917;
+  
+  /* Brand Colors - Primary */
+  --brand-600: #57534e;
+  --brand-700: #44403c;
+  --brand-800: #292524;
+  --brand-900: #1c1917;
+  
+  /* Accent Colors */
+  --accent-amber-100: #fef3c7;
+  --accent-amber-600: #d97706;
+  --accent-amber-700: #b45309;
+  --accent-orange-400: #fb923c;
+  
+  /* Supporting Neutrals */
+  --neutral-50: #fafaf9;
+  --neutral-100: #f5f5f4;
+  --neutral-200: #e7e5e4;
+  --neutral-300: #d6d3d1;
+  --neutral-600: #57534e;
+  --neutral-700: #44403c;
+  --neutral-900: #1c1917;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-inter);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1c1917;
+    --foreground: #fafaf9;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Custom animations */
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+
+.animation-delay-200 {
+  animation-delay: 0.2s;
+  opacity: 0;
+}
+
+.animation-delay-400 {
+  animation-delay: 0.4s;
+  opacity: 0;
+}
+
+.delay-1000 {
+  animation-delay: 1s;
+}
