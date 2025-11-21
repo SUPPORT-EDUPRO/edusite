@@ -1,13 +1,13 @@
 // Helper functions for organization-type-specific registration forms
 
-export type OrganizationType = 
-  | 'preschool' 
-  | 'primary_school' 
-  | 'high_school' 
-  | 'k12_school' 
-  | 'fet_college' 
-  | 'training_center' 
-  | 'university' 
+export type OrganizationType =
+  | 'preschool'
+  | 'primary_school'
+  | 'high_school'
+  | 'k12_school'
+  | 'fet_college'
+  | 'training_center'
+  | 'university'
   | 'other';
 
 interface FormSection {
@@ -26,12 +26,20 @@ export function getFormSections(orgType: OrganizationType): Record<string, FormS
   return {
     guardian: {
       id: 'guardian',
-      title: basePreschool ? 'Parent/Guardian Information' : isTrainingCenter ? 'Contact Information' : 'Parent/Guardian Information',
+      title: basePreschool
+        ? 'Parent/Guardian Information'
+        : isTrainingCenter
+          ? 'Contact Information'
+          : 'Parent/Guardian Information',
       visible: true,
     },
     student: {
       id: 'student',
-      title: basePreschool ? 'Child Information' : isTrainingCenter ? 'Participant Information' : 'Student Information',
+      title: basePreschool
+        ? 'Child Information'
+        : isTrainingCenter
+          ? 'Participant Information'
+          : 'Student Information',
       visible: true,
     },
     preschoolSpecific: {
@@ -91,17 +99,16 @@ export function getFieldLabels(orgType: OrganizationType) {
     studentLabel: basePreschool ? 'Child' : isTrainingCenter ? 'Participant' : 'Student',
     guardianLabel: isTrainingCenter ? 'Contact Person' : 'Parent/Guardian',
     dobLabel: basePreschool ? 'Date of Birth' : 'Date of Birth',
-    classLabel: basePreschool ? 'Preferred Class' : 
-                isTrainingCenter ? 'Course/Program' : 
-                'Grade/Class',
+    classLabel: basePreschool
+      ? 'Preferred Class'
+      : isTrainingCenter
+        ? 'Course/Program'
+        : 'Grade/Class',
     startDateLabel: isTrainingCenter ? 'Preferred Start Date' : 'Academic Year Start',
   };
 }
 
-export function shouldShowField(
-  fieldName: string,
-  orgType: OrganizationType
-): boolean {
+export function shouldShowField(fieldName: string, orgType: OrganizationType): boolean {
   const preschoolOnly = [
     'birthCertificateNumber',
     'immunizationRecord',
@@ -150,16 +157,13 @@ export function shouldShowField(
   return true;
 }
 
-export function getEmptyStateMessage(
-  section: string,
-  orgType: OrganizationType
-): string {
+export function getEmptyStateMessage(section: string, orgType: OrganizationType): string {
   const isTrainingCenter = orgType === 'training_center';
   const basePreschool = orgType === 'preschool';
 
   if (section === 'classes') {
     if (basePreschool) {
-      return 'No classes are currently available for the 2026 academic year. Please contact the school directly.';
+      return 'No classes are currently available. Please contact the school directly.';
     }
     if (isTrainingCenter) {
       return 'No courses are currently open for registration. Please check back later or contact us.';
