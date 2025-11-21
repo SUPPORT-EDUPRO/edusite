@@ -184,9 +184,8 @@ export async function POST(request: NextRequest) {
           body: JSON.stringify({
             to: registration.parent_email,
             subject: emailContent.subject,
-            html: emailContent.html,
-            text: emailContent.text,
-            organization_id: registration.organization_id,
+            body: emailContent.html, // Edge Function expects 'body' not 'html'
+            is_html: true,
             confirmed: true, // Explicit confirmation required by Edge Function
           }),
         }
