@@ -3,8 +3,16 @@ import { PublicRegistrationForm } from '@/components/registration/PublicRegistra
 // Young Eagles specific registration page
 export default function YoungEaglesRegistration() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-100">
-      <PublicRegistrationForm
+    <div className="relative min-h-screen bg-gradient-to-br from-blue-50 to-purple-100">
+      {/* Background Image */}
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-10"
+        style={{ backgroundImage: 'url(/app-icons/yehc_logo.png)' }}
+      />
+      
+      {/* Form Content */}
+      <div className="relative z-10">
+        <PublicRegistrationForm
         organizationId="ba79097c-1b93-4b48-bcbe-df73878ab4d1"
         schoolCode="YE-2026"
         schoolName="Young Eagles Preschool"
@@ -25,6 +33,7 @@ export default function YoungEaglesRegistration() {
           terms_and_conditions_url: 'https://youngeagles.org.za/terms-and-conditions',
         }}
       />
+      </div>
     </div>
   );
 }
