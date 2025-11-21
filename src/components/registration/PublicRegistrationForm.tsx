@@ -23,17 +23,6 @@ interface PublicRegistrationFormProps {
   initialBranding?: OrganizationBranding | null;
 }
 
-interface ClassOption {
-  id: string;
-  name: string;
-  grade_level: string;
-  max_students: number;
-  current_students: number;
-  class_type?: string;
-  age_range?: string;
-  duration?: string;
-}
-
 export interface OrganizationBranding {
   id: string;
   name: string;
@@ -67,7 +56,6 @@ const getInitialFormState = () => ({
   studentLastName: '',
   studentDob: '',
   studentGender: '',
-  studentIdNumber: '',
   studentNationality: '',
   studentHomeLanguage: '',
   studentMedicalConditions: '',
@@ -76,7 +64,6 @@ const getInitialFormState = () => ({
   studentDietaryRequirements: '',
   doctorName: '',
   doctorPhone: '',
-  preferredClass: '',
   preferredStartDate: '',
   previousSchool: '',
   reasonForTransfer: '',
@@ -92,7 +79,6 @@ const getInitialFormState = () => ({
   consentMarketing: false,
   termsAccepted: false,
   // Preschool-specific fields
-  birthCertificateNumber: '',
   immunizationRecord: '',
   motherName: '',
   motherPhone: '',
@@ -130,12 +116,19 @@ export function PublicRegistrationForm({
 }: PublicRegistrationFormProps) {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [availableClasses, setAvailableClasses] = useState<ClassOption[]>([]);
-  const [loadingClasses, setLoadingClasses] = useState(true);
   const [organizationBranding, setOrganizationBranding] = useState<OrganizationBranding | null>(initialBranding);
   const [formData, setFormData] = useState(getInitialFormState());
   const [nearbySchools, setNearbySchools] = useState<NearbySchool[]>([]);
   const [showNearbySchools, setShowNearbySchools] = useState(false);
+  const [campaignInfo, setCampaignInfo] = useState<{
+    valid: boolean;
+    discount: number;
+    remaining: number;
+    maxRedemptions: number;
+    code: string;
+  } | null>(null);
+  const [validatingCoupon, setValidatingCoupon] = useState(false);
+  const [liveSpots, setLiveSpots] = useState<number | null>(null);
 
   // Get organization type and derived helpers
   const orgType = organizationBranding?.organization_type || 'other';
@@ -178,6 +171,81 @@ export function PublicRegistrationForm({
 
     return required.every((field) => field !== '' && field !== false);
   };
+
+  // Fetch live spots remaining for Young Eagles promo
+  useEffect(() => {
+    const fetchLiveSpots = async () => {
+      if (organizationId !== 'ba79097c-1b93-4b48-bcbe-df73878ab4d1') return;
+      
+      try {
+        const { data, error } = await supabase
+          .from('marketing_campaigns')
+          .select('current_redemptions, max_redemptions')
+          .eq('coupon_code', 'WELCOME2026')
+          .eq('active', true)
+          .single();
+
+        if (!error && data) {
+          const remaining = data.max_redemptions - data.current_redemptions;
+          setLiveSpots(remaining > 0 ? remaining : 0);
+        }
+      } catch (err) {
+        console.error('Error fetching live spots:', err);
+      }
+    };
+
+    fetchLiveSpots();
+    
+    // Poll every 10 seconds for real-time updates
+    const interval = setInterval(fetchLiveSpots, 10000);
+    return () => clearInterval(interval);
+  }, [organizationId]);
+
+  // Validate coupon code in real-time
+  useEffect(() => {
+    const validateCoupon = async () => {
+      const code = formData.couponCode.trim().toUpperCase();
+      
+      if (!code) {
+        setCampaignInfo(null);
+        return;
+      }
+
+      setValidatingCoupon(true);
+      try {
+        const { data: campaign, error } = await supabase
+          .from('marketing_campaigns')
+          .select('id, promo_code, discount_type, discount_percentage, discount_amount, current_redemptions, max_redemptions, active')
+          .eq('organization_id', organizationId)
+          .eq('coupon_code', code)
+          .eq('active', true)
+          .single();
+
+        if (!error && campaign) {
+          const remaining = campaign.max_redemptions - campaign.current_redemptions;
+          const hasSlots = remaining > 0;
+          
+          setCampaignInfo({
+            valid: hasSlots,
+            discount: campaign.discount_type === 'percentage' ? campaign.discount_percentage : campaign.discount_amount,
+            remaining,
+            maxRedemptions: campaign.max_redemptions,
+            code: campaign.promo_code
+          });
+        } else {
+          setCampaignInfo(null);
+        }
+      } catch (err) {
+        console.error('Error validating coupon:', err);
+        setCampaignInfo(null);
+      } finally {
+        setValidatingCoupon(false);
+      }
+    };
+
+    const timer = setTimeout(validateCoupon, 500);
+    return () => clearTimeout(timer);
+  }, [formData.couponCode, organizationId]);
 
   // Fetch nearby schools when address changes (debounced)
   useEffect(() => {
@@ -255,29 +323,35 @@ export function PublicRegistrationForm({
     }
   }, [organizationId]);
 
-  const fetchAvailableClasses = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('classes')
-        .select('id, name, grade_level, max_students, current_students, class_type, age_range, duration')
-        .eq('organization_id', organizationId)
-        .eq('academic_year', '2026')
-        .eq('active', true)
-        .order('grade_level', { ascending: true });
+  // Auto-assign class based on child's age
+  // This mapping is flexible and can be customized per organization
+  const getAgeGroupFromDob = useCallback((dob: string) => {
+    if (!dob) return null;
+    
+    const birthDate = new Date(dob);
+    const today = new Date();
+    const ageInMonths = (today.getFullYear() - birthDate.getFullYear()) * 12 + 
+                        (today.getMonth() - birthDate.getMonth());
+    
+    // Age group mapping - schools can define their own groupings
+    // Young Eagles example: 6mo-1yr, 1-3yrs, 4-6yrs
+    if (ageInMonths < 12) return { name: 'Little Explorers', range: '6 months - 1 year' };
+    if (ageInMonths < 36) return { name: 'Curious Cubs', range: '1-3 years' };
+    if (ageInMonths < 72) return { name: 'Panda', range: '4-6 years' };
+    return { name: 'Advanced', range: '6+ years' };
+  }, []);
 
-      if (error) throw error;
-      setAvailableClasses(data || []);
-    } catch (error) {
-      console.error('Error fetching classes:', error);
-    } finally {
-      setLoadingClasses(false);
-    }
-  }, [organizationId]);
+  const [autoAssignedClass, setAutoAssignedClass] = useState<{name: string, range: string} | null>(null);
 
-  // Fetch available classes for this organization
+  // Auto-assign class when student DOB changes
   useEffect(() => {
-    fetchAvailableClasses();
-  }, [fetchAvailableClasses]);
+    if (formData.studentDob) {
+      const ageGroup = getAgeGroupFromDob(formData.studentDob);
+      setAutoAssignedClass(ageGroup);
+    } else {
+      setAutoAssignedClass(null);
+    }
+  }, [formData.studentDob, getAgeGroupFromDob]);
 
   useEffect(() => {
     if (initialBranding) {
@@ -314,11 +388,13 @@ export function PublicRegistrationForm({
       // Validate and apply coupon code if provided
       let campaignId = null;
       let discountAmount = 0;
+      const baseRegistrationFee = 300; // R300 base fee for Young Eagles
+      let finalAmount = baseRegistrationFee;
       
       if (formData.couponCode.trim()) {
         const { data: campaign, error: campaignError } = await supabase
           .from('marketing_campaigns')
-          .select('id, discount_type, discount_percentage, discount_amount')
+          .select('id, discount_type, discount_percentage, discount_amount, current_redemptions, max_redemptions')
           .eq('organization_id', organizationId)
           .eq('coupon_code', formData.couponCode.trim().toUpperCase())
           .eq('active', true)
@@ -329,15 +405,23 @@ export function PublicRegistrationForm({
         if (campaignError) {
           console.error('Error validating coupon:', campaignError);
         } else if (campaign) {
-          campaignId = campaign.id;
-          // Calculate discount (assuming a base registration fee exists)
-          if (campaign.discount_type === 'percentage' && campaign.discount_percentage) {
-            discountAmount = campaign.discount_percentage;
-          } else if (campaign.discount_type === 'fixed' && campaign.discount_amount) {
-            discountAmount = campaign.discount_amount;
+          // Check if promo still has slots
+          const remaining = campaign.max_redemptions - campaign.current_redemptions;
+          if (remaining > 0) {
+            campaignId = campaign.id;
+            // Calculate discount
+            if (campaign.discount_type === 'percentage' && campaign.discount_percentage) {
+              discountAmount = campaign.discount_percentage;
+              finalAmount = baseRegistrationFee * (1 - campaign.discount_percentage / 100);
+            } else if (campaign.discount_type === 'fixed' && campaign.discount_amount) {
+              discountAmount = campaign.discount_amount;
+              finalAmount = Math.max(0, baseRegistrationFee - campaign.discount_amount);
+            }
+          } else {
+            alert('Sorry, all discount slots have been claimed. Registration will proceed at full price (R300).');
           }
         } else if (formData.couponCode.trim()) {
-          alert('Invalid or expired coupon code. Registration will proceed without discount.');
+          alert('Invalid or expired coupon code. Registration will proceed at full price (R300).');
         }
       }
 
@@ -419,6 +503,7 @@ export function PublicRegistrationForm({
         .from('registration_requests')
         .insert({
           organization_id: organizationId,
+          // Guardian Information
           guardian_name: formData.guardianName,
           guardian_email: formData.guardianEmail,
           guardian_phone: formData.guardianPhone,
@@ -426,19 +511,79 @@ export function PublicRegistrationForm({
           guardian_address: formData.guardianAddress,
           guardian_occupation: formData.guardianOccupation,
           guardian_employer: formData.guardianEmployer,
+          guardian_work_phone: formData.guardianWorkPhone,
+          // Secondary Guardian
+          secondary_guardian_name: formData.secondaryGuardianName,
+          secondary_guardian_email: formData.secondaryGuardianEmail,
+          secondary_guardian_phone: formData.secondaryGuardianPhone,
+          secondary_guardian_relationship: formData.secondaryGuardianRelationship,
+          // Parent Details
+          mother_name: formData.motherName,
+          mother_phone: formData.motherPhone,
+          mother_email: formData.motherEmail,
+          mother_occupation: formData.motherOccupation,
+          mother_employer: formData.motherEmployer,
+          father_name: formData.fatherName,
+          father_phone: formData.fatherPhone,
+          father_email: formData.fatherEmail,
+          father_occupation: formData.fatherOccupation,
+          father_employer: formData.fatherEmployer,
+          // Student Information
           student_first_name: formData.studentFirstName,
           student_last_name: formData.studentLastName,
           student_dob: formData.studentDob,
           student_gender: formData.studentGender,
-          student_id_number: formData.studentIdNumber,
-          preferred_class: formData.preferredClass,
+          student_nationality: formData.studentNationality,
+          student_home_language: formData.studentHomeLanguage,
+          // Medical/Health
+          student_medical_conditions: formData.studentMedicalConditions,
+          student_allergies: formData.studentAllergies,
+          student_medication: formData.studentMedication,
+          student_dietary_requirements: formData.studentDietaryRequirements,
+          doctor_name: formData.doctorName,
+          doctor_phone: formData.doctorPhone,
+          immunization_record: formData.immunizationRecord,
+          // Emergency Contact
+          emergency_contact_name: formData.emergencyContactName,
+          emergency_contact_phone: formData.emergencyContactPhone,
+          emergency_contact_relationship: formData.emergencyContactRelationship,
+          // Registration Details
+          preferred_class: autoAssignedClass?.name || '',
           preferred_start_date: formData.preferredStartDate,
+          previous_school: formData.previousSchool,
+          reason_for_transfer: formData.reasonForTransfer,
           special_requests: formData.specialRequests,
           how_did_you_hear: formData.howDidYouHear,
+          coupon_code: formData.couponCode,
           sibling_enrolled: formData.siblingEnrolled,
           sibling_student_id: formData.siblingStudentId || null,
+          // Preschool-Specific
+          sleeping_habits: formData.sleepingHabits,
+          feeding_habits: formData.feedingHabits,
+          toilet_trained: formData.toiletTrained,
+          favourite_activities: formData.favouriteActivities,
+          behavioral_concerns: formData.behavioralConcerns,
+          developmental_delays: formData.developmentalDelays,
+          special_needs: formData.specialNeeds,
+          // Transport
+          transport_required: formData.transportRequired,
+          transport_pickup_address: formData.transportPickupAddress,
+          transport_dropoff_address: formData.transportDropoffAddress,
+          preferred_meal_plan: formData.preferredMealPlan,
+          authorized_pickup_persons: formData.authorizedPickupPersons,
+          // Cultural/Religious
+          religious_considerations: formData.religiousConsiderations,
+          cultural_considerations: formData.culturalConsiderations,
+          // Consents
+          consent_photography: formData.consentPhotography,
+          consent_marketing: formData.consentMarketing,
+          terms_accepted: formData.termsAccepted,
+          photo_id_required: formData.photoIDRequired,
+          // System Fields
           campaign_applied: campaignId,
           discount_amount: discountAmount,
+          registration_fee_amount: finalAmount,
+          registration_fee_paid: false,
           academic_year: '2026',
           status: 'pending',
           priority_points: formData.siblingEnrolled ? 5 : 0,
@@ -478,13 +623,46 @@ export function PublicRegistrationForm({
           </p>
           <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
             <h3 className="mb-2 font-semibold text-blue-900 dark:text-blue-200">
+              💳 Payment Required
+            </h3>
+            <div className="space-y-2 text-sm text-blue-800 dark:text-blue-300">
+              <p className="font-medium">
+                Registration Fee: <span className="text-lg font-bold">R{campaignInfo && campaignInfo.valid ? '150.00' : '300.00'}</span>
+              </p>
+              {campaignInfo && campaignInfo.valid && (
+                <p className="text-green-700 dark:text-green-400">
+                  ✓ 50% discount applied with WELCOME2026!
+                </p>
+              )}
+              <div className="mt-3 rounded-md bg-white/50 p-3 dark:bg-gray-800/50">
+                <p className="font-semibold mb-2">Bank Transfer Details:</p>
+                <div className="space-y-1 text-xs">
+                  <p><strong>Bank:</strong> First National Bank (FNB)</p>
+                  <p><strong>Account Name:</strong> Young Eagles Education Platform</p>
+                  <p><strong>Account Number:</strong> 62777403181 </p>
+                  <p><strong>Reference:</strong> REG-{formData.studentFirstName}-{formData.studentLastName}</p>
+                </div>
+              </div>
+              <p className="mt-2 text-xs">
+                📧 Payment details will be sent to {formData.guardianEmail}
+              </p>
+              <p className="text-xs italic">
+                * Your registration will be approved after payment verification
+              </p>
+            </div>
+          </div>
+
+          <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+            <h3 className="mb-2 font-semibold text-blue-900 dark:text-blue-200">
               What happens next?
             </h3>
             <ul className="space-y-2 text-left text-sm text-blue-800 dark:text-blue-300">
               <li>✓ Confirmation email sent to {formData.guardianEmail}</li>
-              <li>✓ Application under review (2-3 business days)</li>
-              <li>✓ You&apos;ll receive approval/rejection notification</li>
-              <li>✓ If approved, complete enrollment and pay fees</li>
+              <li>✓ Make payment using the bank details above</li>
+              <li>✓ Upload proof of payment (link in email)</li>
+              <li>✓ Admin verifies payment (1-2 business days)</li>
+              <li>✓ Application approved & student account created</li>
+              <li>✓ You&apos;ll receive login details for the app</li>
             </ul>
           </div>
 
@@ -524,7 +702,7 @@ export function PublicRegistrationForm({
             <div className="flex flex-col gap-3">
               <a
                 href="edudashpro://landing"
-                onClick={(e) => {
+                onClick={() => {
                   setTimeout(() => {
                     window.location.href = 'https://edudashpro.org.za/landing';
                   }, 500);
@@ -570,11 +748,11 @@ export function PublicRegistrationForm({
     );
   }
 
+  // Main registration form
   return (
     <form
       onSubmit={handleSubmit}
-      className="mx-auto max-w-3xl rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800"
-    >
+      className="mx-auto max-w-3xl rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
       {/* Organization Branding Header */}
       {organizationBranding && (
         <div className="mb-6 rounded-lg border border-gray-200 bg-gradient-to-r from-gray-50 to-white p-6 dark:border-gray-700 dark:from-gray-800 dark:to-gray-900">
@@ -610,6 +788,55 @@ export function PublicRegistrationForm({
               {organizationBranding.registration_message}
             </p>
           )}
+        </div>
+      )}
+
+      {/* Limited Time Offer Banner */}
+      {organizationId === 'ba79097c-1b93-4b48-bcbe-df73878ab4d1' && (
+        <div className="mb-6 overflow-hidden rounded-lg border-2 border-purple-400 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 p-1 shadow-xl">
+          <div className="rounded-md bg-white p-5 dark:bg-gray-800">
+            <div className="flex items-start gap-4">
+              <div className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 p-3">
+                <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="mb-2 flex flex-wrap items-center gap-2">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    🎉 Limited Time Offer!
+                  </h3>
+                  {liveSpots !== null && (
+                    <span className={`animate-pulse rounded-full px-3 py-1 text-xs font-bold text-white ${
+                      liveSpots <= 10 ? 'bg-red-600' : liveSpots <= 25 ? 'bg-orange-500' : 'bg-red-500'
+                    }`}>
+                      {liveSpots > 0 ? `${liveSpots} SPOTS LEFT` : 'SOLD OUT'}
+                    </span>
+                  )}
+                </div>
+                <p className="mb-3 text-gray-700 dark:text-gray-300">
+                  <span className="font-bold text-red-600">Was R300.00, now <span className="text-green-600">R150.00</span>!</span><br />
+                  Be one of the first 50 families to register and get <strong className="text-purple-600 dark:text-purple-400">50% OFF</strong> your registration fee!
+                </p>
+                <div className="rounded-lg bg-gradient-to-r from-purple-100 to-pink-100 p-3 dark:from-purple-900/30 dark:to-pink-900/30">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        Use code: <span className="font-mono text-lg text-purple-600 dark:text-purple-400">WELCOME2026</span>
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">
+                        Valid until February 28, 2026
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">50% OFF</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400">Registration Fee</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -677,20 +904,6 @@ export function PublicRegistrationForm({
               required
               className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
               placeholder="+27 11 123 4567"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              ID Number (Optional)
-            </label>
-            <input
-              type="text"
-              name="guardianIdNumber"
-              value={formData.guardianIdNumber}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              placeholder="8901015800089"
             />
           </div>
 
@@ -869,6 +1082,29 @@ export function PublicRegistrationForm({
           Student Information
         </h2>
 
+        {/* Document Requirements Notice */}
+        <div className="mb-6 rounded-lg border-l-4 border-orange-500 bg-orange-50 p-4 dark:bg-orange-900/20">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5" />
+            <div className="flex-1">
+              <h3 className="font-semibold text-orange-900 dark:text-orange-200 mb-1">
+                📱 Required Documents - Upload via EduDash Pro App
+              </h3>
+              <p className="text-sm text-orange-800 dark:text-orange-300">
+                After registration approval, you <strong>must upload the following documents within 7 days</strong> using the <strong>EduDash Pro mobile app</strong>:
+              </p>
+              <ul className="mt-2 space-y-1 text-sm text-orange-800 dark:text-orange-300 ml-4">
+                <li>• Student Birth Certificate</li>
+                <li>• Student Clinic Card (Road to Health Card)</li>
+                <li>• Parent/Guardian ID Document</li>
+              </ul>
+              <p className="mt-3 text-xs text-orange-700 dark:text-orange-400 font-semibold">
+                ⚠️ Document upload is NOT available during registration. You will receive app login details after your application is approved.
+              </p>
+            </div>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -931,20 +1167,6 @@ export function PublicRegistrationForm({
               <option value="female">Female</option>
               <option value="other">Other</option>
             </select>
-          </div>
-
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Student ID Number (Optional)
-            </label>
-            <input
-              type="text"
-              name="studentIdNumber"
-              value={formData.studentIdNumber}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              placeholder="Birth certificate or ID number"
-            />
           </div>
 
           <div>
@@ -1299,20 +1521,6 @@ export function PublicRegistrationForm({
             </h2>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="md:col-span-2">
-                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Birth Certificate Number
-                </label>
-                <input
-                  type="text"
-                  name="birthCertificateNumber"
-                  value={formData.birthCertificateNumber}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-green-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                  placeholder="Birth certificate number"
-                />
-              </div>
-
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                   Toilet Trained?
@@ -1447,30 +1655,27 @@ export function PublicRegistrationForm({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Preferred Class <span className="text-red-500">*</span>
+              Assigned Class <span className="text-blue-500 text-xs">(Auto-assigned based on age)</span>
             </label>
-            <select
-              name="preferredClass"
-              value={formData.preferredClass}
-              onChange={handleChange}
-              required
-              disabled={loadingClasses}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-            >
-              <option value="">
-                {loadingClasses ? 'Loading classes...' : 'Select preferred class'}
-              </option>
-              {availableClasses.map((classOption) => (
-                <option key={classOption.id} value={classOption.id}>
-                  {classOption.name}
-                  {classOption.duration ? ` - ${classOption.duration}` : ` - ${classOption.grade_level}`}
-                  {classOption.age_range ? ` (${classOption.age_range})` : ''}
-                  {classOption.current_students >= classOption.max_students 
-                    ? ' [Full]' 
-                    : ` [${classOption.max_students - classOption.current_students} spots]`}
-                </option>
-              ))}
-            </select>
+            <div className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-300">
+              {autoAssignedClass ? (
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-purple-600 dark:text-purple-400">
+                    {autoAssignedClass.name}
+                  </span>
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
+                    ({autoAssignedClass.range})
+                  </span>
+                </div>
+              ) : (
+                <span className="text-gray-400 dark:text-gray-500">
+                  {formData.studentDob ? 'Calculating...' : 'Enter child\'s date of birth first'}
+                </span>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              Class assignment is based on your child's age. Our admin team will confirm placement.
+            </p>
           </div>
 
           <div>
@@ -1541,15 +1746,68 @@ export function PublicRegistrationForm({
               Promo/Coupon Code (Optional)
               <span className="ml-2 text-xs text-gray-500">Have a discount code? Enter it here</span>
             </label>
-            <input
-              type="text"
-              name="couponCode"
-              value={formData.couponCode}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 font-mono uppercase focus:ring-2 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              placeholder="WELCOME2026"
-              maxLength={20}
-            />
+            <div className="relative">
+              <input
+                type="text"
+                name="couponCode"
+                value={formData.couponCode}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 font-mono uppercase focus:ring-2 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                placeholder="WELCOME2026"
+                maxLength={20}
+              />
+              {validatingCoupon && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                </div>
+              )}
+            </div>
+            
+            {/* Promo Code Status Display */}
+            {campaignInfo && (
+              <div className={`mt-2 rounded-lg border p-3 ${
+                campaignInfo.valid 
+                  ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' 
+                  : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
+              }`}>
+                {campaignInfo.valid ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      <span className="text-sm font-semibold text-green-700 dark:text-green-300">
+                        {campaignInfo.discount}% Discount Applied!
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-green-600 dark:text-green-400">
+                        🎉 Only {campaignInfo.remaining} of {campaignInfo.maxRedemptions} spots remaining!
+                      </span>
+                      <span className="rounded-full bg-green-600 px-2 py-0.5 text-xs font-bold text-white">
+                        {campaignInfo.remaining} LEFT
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                    <span className="text-sm text-red-700 dark:text-red-300">
+                      Sorry, all {campaignInfo.maxRedemptions} discount slots have been claimed.
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {formData.couponCode && !campaignInfo && !validatingCoupon && (
+              <div className="mt-2 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/20">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-yellow-600 dark:text-yellow-400" />
+                  <span className="text-sm text-yellow-700 dark:text-yellow-300">
+                    Invalid or expired code. Registration will proceed without discount.
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="md:col-span-2">
@@ -1694,7 +1952,7 @@ export function PublicRegistrationForm({
         </div>
       </section>
 
-      {/* Submit Button */
+      {/* Submit Button */}
       <div className="border-t border-gray-200 pt-6 dark:border-gray-700">
         <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
           <div className="flex items-start gap-2">
