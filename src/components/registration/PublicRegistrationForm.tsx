@@ -912,7 +912,7 @@ export function PublicRegistrationForm({
                         Use code: <span className="font-mono text-base sm:text-lg text-purple-600 dark:text-purple-400">WELCOME2026</span>
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Valid until February 28, 2026
+                        Valid until January 30, 2026
                       </p>
                     </div>
                     <div className="text-left sm:text-right">
