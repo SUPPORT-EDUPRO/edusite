@@ -100,6 +100,7 @@ function UploadPaymentContent() {
           proof_of_payment_url: publicUrl,
           payment_date: new Date().toISOString(),
           payment_amount: registration.registration_fee_amount,
+          status: 'pending'
         })
         .eq('id', registration.id);
       
