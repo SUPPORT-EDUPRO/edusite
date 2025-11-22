@@ -535,6 +535,9 @@ export function PublicRegistrationForm({
         }
       }
 
+      // Generate payment reference BEFORE insert
+      const paymentReference = `REG-${new Date().getFullYear()}-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+
       // Insert registration request with all fields
       const { data, error } = await supabase
         .from('registration_requests')
@@ -625,20 +628,15 @@ export function PublicRegistrationForm({
           status: 'pending',
           priority_points: formData.siblingEnrolled ? 5 : 0,
           documents: additionalData,
+          payment_reference: paymentReference,
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Generate payment reference
-      const paymentReference = `REG${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-
-      // Update registration with payment reference
-      await supabase
-        .from('registration_requests')
-        .update({ payment_reference: paymentReference })
-        .eq('id', data.id);
+      // Remove the old payment reference update - it's now in the insert above
+      // Payment reference is already set in the initial insert
 
       // Store campaign info before resetting form
       if (campaignInfo && campaignInfo.valid) {
