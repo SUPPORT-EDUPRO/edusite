@@ -704,7 +704,7 @@ export function PublicRegistrationForm({
             </h3>
             <div className="space-y-2 text-sm text-blue-800 dark:text-blue-300">
               <p className="font-medium">
-                Registration Fee: <span className="text-lg font-bold">R{submittedWithDiscount ? '150.00' : '300.00'}</span>
+                Registration Fee: <span className="text-lg font-bold">R{submittedWithDiscount ? '200.00' : '400.00'}</span>
               </p>
               {submittedWithDiscount && (
                 <p className="text-green-700 dark:text-green-400">
