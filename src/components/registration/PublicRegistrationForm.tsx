@@ -64,7 +64,7 @@ const getInitialFormState = () => ({
   studentDietaryRequirements: '',
   doctorName: '',
   doctorPhone: '',
-  preferredStartDate: '',
+  preferredStartDate: '2026-01-12',
   previousSchool: '',
   reasonForTransfer: '',
   specialRequests: '',
@@ -510,6 +510,31 @@ export function PublicRegistrationForm({
         }),
       };
 
+      // Check for duplicate registration (only if DOB is provided)
+      if (formData.studentDateOfBirth) {
+        const { data: existingRegistration, error: duplicateCheckError } = await supabase
+          .from('registration_requests')
+          .select('id, status, created_at')
+          .eq('organization_id', organizationId)
+          .eq('student_first_name', formData.studentFirstName)
+          .eq('student_last_name', formData.studentLastName)
+          .eq('student_date_of_birth', formData.studentDateOfBirth)
+          .maybeSingle();
+
+        if (existingRegistration && !duplicateCheckError) {
+          const statusMessages: Record<string, string> = {
+            'pending': 'A registration for this child is already pending review.',
+            'approved': 'This child is already registered and approved.',
+            'rejected': 'A previous registration for this child was rejected. Please contact the school.',
+          };
+          
+          throw new Error(
+            statusMessages[existingRegistration.status] || 
+            `A registration for ${formData.studentFirstName} ${formData.studentLastName} already exists. Please contact the school if you need to update information.`
+          );
+        }
+      }
+
       // Insert registration request with all fields
       const { data, error } = await supabase
         .from('registration_requests')
@@ -592,7 +617,7 @@ export function PublicRegistrationForm({
           terms_accepted: formData.termsAccepted,
           photo_id_required: formData.photoIDRequired,
           // System Fields
-          campaign_applied: campaignId,
+          campaign_applied: campaignId || null,
           discount_amount: discountAmount,
           registration_fee_amount: finalAmount,
           registration_fee_paid: false,
@@ -637,6 +662,7 @@ export function PublicRegistrationForm({
             discountAmount: discountAmount,
             registrationId: data.id,
             paymentReference: paymentReference,
+            organizationSlug: slug || 'young-eagles',
           }),
         });
 

@@ -31,7 +31,7 @@ function UploadPaymentContent() {
           .from('registration_requests')
           .select('*')
           .eq('payment_reference', paymentRef)
-          .single();
+          .maybeSingle(); // Use maybeSingle() instead of single() to handle 0 or 1 results
 
         if (error) throw error;
         

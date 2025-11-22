@@ -11,6 +11,10 @@ interface RegistrationConfirmationData {
   studentName: string;
   schoolName: string;
   registrationId: string;
+  registrationFee?: number;
+  discountApplied?: boolean;
+  originalFee?: number;
+  paymentReference?: string;
 }
 
 export function generateRegistrationConfirmation(data: RegistrationConfirmationData): { subject: string; html: string; text: string } {
@@ -20,7 +24,14 @@ export function generateRegistrationConfirmation(data: RegistrationConfirmationD
     studentName,
     schoolName,
     registrationId,
+    registrationFee = 300,
+    discountApplied = false,
+    originalFee = 300,
+    paymentReference,
   } = data;
+
+  // Shorten payment reference to last 12 characters for display
+  const shortReference = paymentReference ? paymentReference.slice(-12) : registrationId.slice(-12);
 
   const subject = `✅ Registration Received - Next Steps Required`;
 
@@ -58,13 +69,20 @@ export function generateRegistrationConfirmation(data: RegistrationConfirmationD
                 We've successfully received your registration for <strong>${studentName}</strong>. Your application is now under review.
               </p>
 
-              <!-- Registration ID -->
+              <!-- Registration Fee -->
               <table role="presentation" style="width: 100%; background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 30px 0;">
                 <tr>
                   <td>
                     <p style="margin: 0 0 10px; color: #555555; font-size: 14px;">
                       <strong>Registration Reference:</strong><br>
-                      <span style="color: #667eea; font-size: 16px; font-family: 'Courier New', monospace;">${registrationId}</span>
+                      <span style="color: #667eea; font-size: 18px; font-family: 'Courier New', monospace; font-weight: bold;">${shortReference}</span>
+                    </p>
+                    <p style="margin: 15px 0 0; color: #555555; font-size: 14px;">
+                      <strong>Registration Fee:</strong><br>
+                      ${discountApplied 
+                        ? `<span style="text-decoration: line-through; color: #999; font-size: 14px;">R${originalFee.toFixed(2)}</span> <span style="color: #28a745; font-size: 20px; font-weight: bold;">R${registrationFee.toFixed(2)}</span> <span style="background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">50% OFF</span>`
+                        : `<span style="color: #333; font-size: 20px; font-weight: bold;">R${registrationFee.toFixed(2)}</span>`
+                      }
                     </p>
                   </td>
                 </tr>
