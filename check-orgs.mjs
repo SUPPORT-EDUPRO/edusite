@@ -5,9 +5,10 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJwcHV6aWJqbHhnZndydWp6ZnN6Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1Mzc0MzczMCwiZXhwIjoyMDY5MzE5NzMwfQ.5zPPaAo1Jj5-SknVMDwvo1DBCXhmS60obAEckJV7o1I'
 )
 
-const { data, error } = await supabase.rpc('exec_sql', {
-  sql: `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name LIKE '%user%' OR table_name LIKE '%admin%' ORDER BY table_name;`
-})
+const { data, error } = await supabase
+  .from('organizations')
+  .select('*')
+  .order('created_at', { ascending: true })
 
-console.log('Tables:', data)
+console.log('Organizations:', JSON.stringify(data, null, 2))
 console.log('Error:', error)
