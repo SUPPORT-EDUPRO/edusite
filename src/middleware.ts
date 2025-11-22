@@ -103,10 +103,39 @@ export async function middleware(request: NextRequest) {
       console.log('[Middleware] Set tenant ID:', tenantId, `(${org.name} - subdomain)`);
     }
   }
-  // Platform admin domain - NO tenant, this is the super-admin portal
+  // Platform admin domain - NO tenant for /admin, but detect from user for /dashboard
   else if (hostname === 'edusitepro.edudashpro.org.za') {
-    console.log('[Middleware] Platform Admin domain - NO tenant context');
-    // tenantId remains null for platform admin access
+    // Platform admins accessing /admin should have no tenant context
+    if (path.startsWith('/admin')) {
+      console.log('[Middleware] Platform Admin domain (/admin) - NO tenant context');
+      // tenantId remains null for platform admin access
+    }
+    // Tenant admins accessing /dashboard should have their org detected from profile
+    else if (path.startsWith('/dashboard')) {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('organization_id')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile?.organization_id) {
+          tenantId = profile.organization_id;
+          
+          // Get the org slug for the header
+          const { data: org } = await supabase
+            .from('organizations')
+            .select('slug')
+            .eq('id', tenantId)
+            .single();
+          
+          tenantSlug = org?.slug || null;
+          console.log('[Middleware] Platform domain (/dashboard) - Tenant from user profile:', tenantId);
+        }
+      }
+    }
   }
 
   // Set tenant headers if found
