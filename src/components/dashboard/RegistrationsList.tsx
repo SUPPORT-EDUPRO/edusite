@@ -240,8 +240,17 @@ export default function RegistrationsList({ registrations, organizationId }: Reg
             {/* Actions */}
             <div className="flex flex-wrap gap-2">
               <Link
-                href={`/dashboard/registrations/${reg.id}`}
-                className="flex-1 rounded-lg bg-blue-100 px-3 py-2 text-xs font-medium text-blue-700 hover:bg-blue-200 text-center"
+                href={reg.proof_of_payment_url ? `/dashboard/registrations/${reg.id}` : '#'}
+                className={`flex-1 rounded-lg px-3 py-2 text-xs font-medium text-center ${
+                  reg.proof_of_payment_url
+                    ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed pointer-events-none'
+                }`}
+                onClick={(e) => {
+                  if (!reg.proof_of_payment_url) {
+                    e.preventDefault();
+                  }
+                }}
               >
                 View Details
               </Link>
