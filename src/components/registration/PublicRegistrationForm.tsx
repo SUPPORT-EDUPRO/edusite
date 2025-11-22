@@ -511,14 +511,14 @@ export function PublicRegistrationForm({
       };
 
       // Check for duplicate registration (only if DOB is provided)
-      if (formData.studentDateOfBirth) {
+      if (formData.studentDob) {
         const { data: existingRegistration, error: duplicateCheckError } = await supabase
           .from('registration_requests')
           .select('id, status, created_at')
           .eq('organization_id', organizationId)
           .eq('student_first_name', formData.studentFirstName)
           .eq('student_last_name', formData.studentLastName)
-          .eq('student_date_of_birth', formData.studentDateOfBirth)
+          .eq('student_date_of_birth', formData.studentDob)
           .maybeSingle();
 
         if (existingRegistration && !duplicateCheckError) {

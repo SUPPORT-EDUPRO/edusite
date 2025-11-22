@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
     // Generate confirmation email using template
     const { subject, html: emailHtml } = generateRegistrationConfirmation({
       parentName,
+      parentEmail,
       studentName,
       schoolName,
       registrationId,
