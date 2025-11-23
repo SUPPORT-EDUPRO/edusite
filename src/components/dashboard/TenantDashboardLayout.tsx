@@ -32,6 +32,12 @@ const navigation: NavItem[] = [
     description: 'Student applications',
   },
   {
+    href: '/dashboard/campaigns',
+    label: 'Campaigns',
+    icon: '🎯',
+    description: 'Marketing campaigns',
+  },
+  {
     href: '/dashboard/content',
     label: 'Website Content',
     icon: '✏️',
