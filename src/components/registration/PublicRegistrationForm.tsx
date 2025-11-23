@@ -136,6 +136,11 @@ export function PublicRegistrationForm({
   } | null>(null);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
   const [liveSpots, setLiveSpots] = useState<number | null>(null);
+  const [emailValidation, setEmailValidation] = useState<{
+    checking: boolean;
+    exists: boolean;
+    message: string;
+  }>({ checking: false, exists: false, message: '' });
 
   // Get organization type and derived helpers
   const orgType = organizationBranding?.organization_type || 'other';
@@ -213,6 +218,61 @@ export function PublicRegistrationForm({
     const interval = setInterval(fetchLiveSpots, 30000); // Reduced frequency to 30s
     return () => clearInterval(interval);
   }, [organizationId]);
+
+  // Validate email for duplicates in real-time
+  useEffect(() => {
+    const validateEmail = async () => {
+      const email = formData.guardianEmail.trim().toLowerCase();
+      
+      if (!email || !email.includes('@')) {
+        setEmailValidation({ checking: false, exists: false, message: '' });
+        return;
+      }
+
+      setEmailValidation({ checking: true, exists: false, message: 'Checking email...' });
+      
+      try {
+        const { data: existingRegs, error } = await supabase
+          .from('registration_requests')
+          .select('id, status, guardian_email, created_at')
+          .eq('organization_id', organizationId)
+          .ilike('guardian_email', email)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        if (error) throw error;
+
+        if (existingRegs && existingRegs.length > 0) {
+          const existing = existingRegs[0];
+          const status = existing.status;
+          
+          if (status === 'approved') {
+            setEmailValidation({
+              checking: false,
+              exists: true,
+              message: '❌ This email already has an approved registration. Please contact the school if you need assistance.'
+            });
+          } else if (status === 'pending') {
+            setEmailValidation({
+              checking: false,
+              exists: true,
+              message: '⚠️ This email already has a pending registration. Please check your email for updates.'
+            });
+          } else {
+            setEmailValidation({ checking: false, exists: false, message: '✅ Email available' });
+          }
+        } else {
+          setEmailValidation({ checking: false, exists: false, message: '✅ Email available' });
+        }
+      } catch (err) {
+        console.error('Error checking email:', err);
+        setEmailValidation({ checking: false, exists: false, message: '' });
+      }
+    };
+
+    const timer = setTimeout(validateEmail, 800); // Debounce 800ms
+    return () => clearTimeout(timer);
+  }, [formData.guardianEmail, organizationId]);
 
   // Validate coupon code in real-time
   useEffect(() => {
@@ -389,6 +449,12 @@ export function PublicRegistrationForm({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Block submission if email already exists
+    if (emailValidation.exists) {
+      alert('This email address is already registered. Please use a different email or contact the school for assistance.');
+      return;
+    }
     
     if (!formData.termsAccepted) {
       alert('Please accept the terms and conditions to continue.');
@@ -1013,15 +1079,39 @@ export function PublicRegistrationForm({
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
               Email Address <span className="text-red-500">*</span>
             </label>
-            <input
-              type="email"
-              name="guardianEmail"
-              value={formData.guardianEmail}
-              onChange={handleChange}
-              required
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-              placeholder="john@example.com"
-            />
+            <div className="relative">
+              <input
+                type="email"
+                name="guardianEmail"
+                value={formData.guardianEmail}
+                onChange={handleChange}
+                required
+                className={`w-full rounded-lg border px-4 py-2 pr-10 focus:ring-2 dark:bg-gray-700 dark:text-white ${
+                  emailValidation.exists
+                    ? 'border-red-500 focus:ring-red-500'
+                    : emailValidation.message === '✅ Email available'
+                    ? 'border-green-500 focus:ring-green-500'
+                    : 'border-gray-300 focus:ring-blue-500 dark:border-gray-600'
+                }`}
+                placeholder="john@example.com"
+              />
+              {emailValidation.checking && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+                </div>
+              )}
+            </div>
+            {emailValidation.message && (
+              <p
+                className={`mt-1 text-sm ${
+                  emailValidation.exists
+                    ? 'text-red-600 dark:text-red-400 font-medium'
+                    : 'text-green-600 dark:text-green-400'
+                }`}
+              >
+                {emailValidation.message}
+              </p>
+            )}
           </div>
 
           <div className="w-full">
