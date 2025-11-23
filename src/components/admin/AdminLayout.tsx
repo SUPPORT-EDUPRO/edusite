@@ -23,6 +23,18 @@ const navigation: NavItem[] = [
     description: 'Overview and stats',
   },
   {
+    href: '/admin/registrations',
+    label: 'Registrations',
+    icon: '📝',
+    description: 'Student applications',
+  },
+  {
+    href: '/admin/campaigns',
+    label: 'Campaigns',
+    icon: '🎟️',
+    description: 'Promo codes & discounts',
+  },
+  {
     href: '/admin/organizations',
     label: 'Organizations',
     icon: '🏢',
