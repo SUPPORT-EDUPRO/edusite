@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-browser';
 import { useRouter } from 'next/navigation';
 import { Plus, Edit2, Trash2, Calendar, Tag, TrendingUp, Users, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
 
@@ -22,6 +22,7 @@ interface Campaign {
 
 export default function CampaignsPage() {
   const router = useRouter();
+  const supabase = createClient();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
