@@ -176,6 +176,39 @@ export async function POST(request: NextRequest) {
       // Continue anyway - link can be created later
     }
 
+    // 7. Increment promo code redemption counter if campaign was applied
+    if (registration.campaign_applied) {
+      // Atomic increment using SQL function
+      const { error: campaignUpdateError } = await supabase.rpc('increment_campaign_redemptions', {
+        campaign_id: registration.campaign_applied
+      });
+
+      if (campaignUpdateError) {
+        console.error('Campaign redemption counter update error:', campaignUpdateError);
+        // Try fallback: manual fetch-increment-update (not atomic but better than nothing)
+        try {
+          const { data: campaign } = await supabase
+            .from('marketing_campaigns')
+            .select('current_redemptions')
+            .eq('id', registration.campaign_applied)
+            .single();
+          
+          if (campaign) {
+            await supabase
+              .from('marketing_campaigns')
+              .update({ current_redemptions: (campaign.current_redemptions || 0) + 1 })
+              .eq('id', registration.campaign_applied);
+            
+            console.log('✅ Promo code redemption counter incremented (fallback method)');
+          }
+        } catch (fallbackError) {
+          console.error('Fallback campaign update also failed:', fallbackError);
+        }
+      } else {
+        console.log('✅ Promo code redemption counter incremented for campaign:', registration.campaign_applied);
+      }
+    }
+
     // 9. Update registration status
     const { error: updateError } = await supabase
       .from('registration_requests')
