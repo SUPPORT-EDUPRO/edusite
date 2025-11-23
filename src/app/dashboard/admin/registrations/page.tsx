@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Check, X, Eye, Search, Filter, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Check, X, Eye, Search, Filter, Clock, CheckCircle, XCircle, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
 import AdminLayout from '@/components/admin/AdminLayout';
@@ -21,6 +21,8 @@ interface Registration {
   preferred_class: string | null;
   preferred_start_date: string | null;
   registration_fee_amount: number | null;
+  registration_fee_paid?: boolean;
+  payment_verified?: boolean;
   discount_amount: number | null;
   coupon_code: string | null;
   status: 'pending' | 'approved' | 'rejected' | 'waitlisted';
@@ -126,6 +128,39 @@ export default function RegistrationsPage() {
       fetchRegistrations();
     } catch (error: any) {
       console.error('Rejection error:', error);
+      alert(`❌ Error: ${error.message}`);
+    } finally {
+      setProcessing(null);
+    }
+  };
+
+  const handleVerifyPayment = async (registrationId: string, verify: boolean) => {
+    const action = verify ? 'verify' : 'remove verification for';
+    if (!confirm(`Are you sure you want to ${action} this payment?`)) {
+      return;
+    }
+
+    setProcessing(registrationId);
+    try {
+      const response = await fetch('/api/registrations/verify-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          registrationId,
+          verified: verify
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || `Failed to ${action} payment`);
+      }
+
+      alert(`✅ ${result.message || 'Payment status updated'}`);
+      fetchRegistrations();
+    } catch (error: any) {
+      console.error(`${action} error:`, error);
       alert(`❌ Error: ${error.message}`);
     } finally {
       setProcessing(null);
@@ -260,6 +295,9 @@ export default function RegistrationsPage() {
                       Fee
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                      Payment
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
@@ -301,6 +339,24 @@ export default function RegistrationsPage() {
                         )}
                       </td>
                       <td className="whitespace-nowrap px-6 py-4">
+                        {(reg as any).payment_verified && reg.status !== 'rejected' ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800">
+                            <ShieldCheck className="h-3 w-3" />
+                            Verified
+                          </span>
+                        ) : (reg as any).registration_fee_paid && reg.status !== 'rejected' ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-yellow-100 px-2.5 py-1 text-xs font-semibold text-yellow-800">
+                            <Clock className="h-3 w-3" />
+                            Pending
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-xs font-semibold text-red-800">
+                            <XCircle className="h-3 w-3" />
+                            Unpaid
+                          </span>
+                        )}
+                      </td>
+                      <td className="whitespace-nowrap px-6 py-4">
                         <span
                           className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
                             reg.status === 'pending'
@@ -325,6 +381,26 @@ export default function RegistrationsPage() {
                           >
                             <Eye className="h-4 w-4" />
                           </Link>
+                          {reg.status === 'approved' && (reg as any).registration_fee_paid && !(reg as any).payment_verified && (
+                            <button
+                              onClick={() => handleVerifyPayment(reg.id, true)}
+                              disabled={processing === reg.id}
+                              className="rounded-lg bg-yellow-100 p-2 text-yellow-700 hover:bg-yellow-200 disabled:opacity-50"
+                              title="Verify Payment"
+                            >
+                              <ShieldCheck className="h-4 w-4" />
+                            </button>
+                          )}
+                          {reg.status === 'approved' && (reg as any).payment_verified && (
+                            <button
+                              onClick={() => handleVerifyPayment(reg.id, false)}
+                              disabled={processing === reg.id}
+                              className="rounded-lg bg-gray-100 p-2 text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+                              title="Remove Verification"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
                           {reg.status === 'pending' && (
                             <>
                               <button

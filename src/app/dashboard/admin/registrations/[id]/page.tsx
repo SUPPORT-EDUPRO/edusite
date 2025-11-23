@@ -25,6 +25,10 @@ interface Registration {
   discount_amount: number | null;
   coupon_code: string | null;
   payment_reference: string | null;
+  proof_of_payment_url: string | null;
+  payment_verified: boolean | null;
+  registration_fee_paid: boolean | null;
+  payment_date: string | null;
   status: 'pending' | 'approved' | 'rejected' | 'waitlisted';
   created_at: string;
   approved_at: string | null;
@@ -70,7 +74,7 @@ export default function RegistrationDetailPage() {
   const handleApprove = async () => {
     if (!registration) return;
     
-    if (!confirm(`Approve registration for ${registration.student_first_name} ${registration.student_last_name}?`)) {
+    if (!confirm(`Approve registration for ${registration.student_first_name} ${registration.student_last_name}?\n\nThis will:\n- Approve the registration\n- Create parent account in EduDashPro\n- Send welcome email with login instructions`)) {
       return;
     }
 
@@ -78,22 +82,53 @@ export default function RegistrationDetailPage() {
     try {
       const supabase = getServiceRoleClient();
 
+      // Step 1: Update status to approved and verify payment if POP exists
+      const updates: any = {
+        status: 'approved',
+        approved_at: new Date().toISOString(),
+        approved_by: 'admin',
+      };
+
+      // If there's proof of payment, mark as verified and paid
+      if (registration.proof_of_payment_url) {
+        updates.payment_verified = true;
+        updates.registration_fee_paid = true;
+        updates.payment_date = new Date().toISOString();
+      }
+
       const { error } = await supabase
         .from('registration_requests')
-        .update({
-          status: 'approved',
-          approved_at: new Date().toISOString(),
-          approved_by: 'admin',
-        })
+        .update(updates)
         .eq('id', registration.id);
 
       if (error) throw error;
 
-      alert('Registration approved successfully!');
+      // Step 2: Trigger sync to EduDashPro to create parent account and send email
+      console.log('[EduSitePro] Triggering sync to EduDashPro for registration:', registration.id);
+      
+      const syncResponse = await fetch('https://lvvvjywrmpcqrpvuptdi.supabase.co/functions/v1/sync-registration-to-edudash', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ registration_id: registration.id }),
+      });
+
+      const syncResult = await syncResponse.json();
+      
+      if (!syncResponse.ok || !syncResult.success) {
+        console.error('[EduSitePro] Sync failed:', syncResult);
+        throw new Error(syncResult.error || 'Failed to sync registration to EduDashPro');
+      }
+
+      console.log('[EduSitePro] Sync successful:', syncResult);
+
+      alert('✅ Registration approved successfully!\n\n✉️ Parent account created and welcome email sent.');
       router.push('/dashboard/admin/registrations');
     } catch (error) {
       console.error('Error approving registration:', error);
-      alert('Failed to approve registration');
+      alert(`Failed to approve registration: ${error instanceof Error ? error.message : 'Unknown error'}\n\nThe registration status was updated but the parent account may not have been created. Please try syncing manually.`);
     } finally {
       setProcessing(false);
     }
