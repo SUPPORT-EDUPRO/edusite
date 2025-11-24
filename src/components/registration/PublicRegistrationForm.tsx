@@ -781,15 +781,22 @@ export function PublicRegistrationForm({
                   <p><strong>Bank:</strong> First National Bank (FNB)</p>
                   <p><strong>Account Name:</strong> Young Eagles Education Platform</p>
                   <p><strong>Account Number:</strong> 62777403181 </p>
-                  <p><strong>Reference:</strong> REG-{formData.studentFirstName}-{formData.studentLastName}</p>
+                  <p><strong>Reference:</strong> {paymentReference.split('-').pop()}</p>
                 </div>
               </div>
               <p className="mt-2 text-xs">
-                📧 Payment details will be sent to {formData.guardianEmail}
+                📧 Payment details sent to {formData.guardianEmail}
               </p>
-              <p className="text-xs italic">
-                * Your registration will be approved after payment verification
-              </p>
+              <div className="mt-3 rounded-md bg-amber-50 p-3 border border-amber-200">
+                <p className="text-xs font-semibold text-amber-900 mb-1">⚠️ Important Next Steps:</p>
+                <ol className="text-xs text-amber-800 space-y-1 ml-4 list-decimal">
+                  <li>Make payment using bank details above</li>
+                  <li>Check your email for confirmation link</li>
+                  <li><strong>Click "Upload Proof of Payment" button in email</strong></li>
+                  <li>Upload your payment slip/screenshot</li>
+                  <li>Wait for admin verification (1-2 business days)</li>
+                </ol>
+              </div>
             </div>
           </div>
 

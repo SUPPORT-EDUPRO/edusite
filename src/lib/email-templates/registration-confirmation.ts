@@ -112,13 +112,13 @@ export function generateRegistrationConfirmation(data: RegistrationConfirmationD
                           <p style="margin: 0 0 12px; color: #333333; font-size: 15px; font-family: 'Courier New', monospace;">Young Eagles Home Care Centre</p>
                           
                           <p style="margin: 0 0 8px; color: #2e7d32; font-size: 13px; font-weight: 600;">Payment Reference (IMPORTANT):</p>
-                          <p style="margin: 0; color: #d32f2f; font-size: 15px; font-family: 'Courier New', monospace; font-weight: 700;">${registrationId}</p>
+                          <p style="margin: 0; color: #d32f2f; font-size: 15px; font-family: 'Courier New', monospace; font-weight: 700;">${shortReference}</p>
                         </td>
                       </tr>
                     </table>
                     <div style="background-color: #fff3cd; border-left: 3px solid #ffc107; padding: 12px; margin: 15px 0; border-radius: 4px;">
                       <p style="margin: 0; color: #856404; font-size: 13px; font-weight: 600;">
-                        ⚠️ CRITICAL: Use <span style="font-family: 'Courier New', monospace;">${registrationId}</span> as your payment reference. This links your payment to your registration.
+                        ⚠️ CRITICAL: Use <span style="font-family: 'Courier New', monospace;">{shortReference}</span> as your payment reference. This links your payment to your registration.
                       </p>
                     </div>
                     <div style="background-color: #e3f2fd; border-left: 3px solid #2196f3; padding: 12px; margin: 15px 0; border-radius: 4px;">
@@ -134,15 +134,23 @@ export function generateRegistrationConfirmation(data: RegistrationConfirmationD
               </table>
 
               <!-- Upload Proof of Payment Button -->
-              <table role="presentation" style="width: 100%; margin: 30px 0;">
+              <table role="presentation" style="width: 100%; background-color: #fff3e0; border-radius: 8px; padding: 20px; margin: 30px 0; border-left: 4px solid #ff9800;">
                 <tr>
-                  <td align="center">
-                    <a href="https://edusitepro.edudashpro.org.za/upload-payment?ref=${paymentReference || registrationId}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 16px 40px; border-radius: 8px; font-weight: 700; font-size: 16px; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3); text-align: center;">
-                      📤 Upload Proof of Payment
-                    </a>
-                    <p style="margin: 12px 0 0; color: #666666; font-size: 13px; text-align: center;">
-                      Click the button above after making your payment
+                  <td>
+                    <h3 style="margin: 0 0 12px; color: #e65100; font-size: 18px; font-weight: 700;">🚨 ACTION REQUIRED: Upload Proof of Payment</h3>
+                    <p style="margin: 0 0 15px; color: #333333; font-size: 14px; line-height: 1.6; font-weight: 600;">
+                      After making your payment, you MUST upload proof of payment for your registration to be processed.
                     </p>
+                    <div style="text-align: center; margin: 20px 0;">
+                      <a href="https://edusitepro.edudashpro.org.za/upload-payment?ref=${paymentReference || registrationId}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 18px 45px; border-radius: 8px; font-weight: 700; font-size: 18px; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3); text-align: center;">
+                        📤 Upload Proof of Payment Now
+                      </a>
+                    </div>
+                    <div style="background-color: #ffebee; border-left: 3px solid #f44336; padding: 12px; margin: 15px 0; border-radius: 4px;">
+                      <p style="margin: 0; color: #c62828; font-size: 13px; font-weight: 600; line-height: 1.5;">
+                        ⚠️ <strong>Important:</strong> Registration cannot be approved without proof of payment. Click the button above immediately after making your payment.
+                      </p>
+                    </div>
                   </td>
                 </tr>
               </table>
