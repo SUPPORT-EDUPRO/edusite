@@ -86,9 +86,11 @@ export async function middleware(request: NextRequest) {
       console.log('[Middleware] Set tenant ID:', tenantId, `(${org.name} - custom domain)`);
     }
   }
-  // Check for subdomain pattern (slug.edusitepro.org.za)
-  // BUT: edusitepro.edudashpro.org.za is the PLATFORM ADMIN domain, not a tenant!
-  else if (hostname.includes('.edusitepro.org.za') && hostname !== 'edusitepro.edudashpro.org.za') {
+  // Check for subdomain pattern (slug.edusitepro.org.za OR slug.edusitepro.edudashpro.org.za)
+  // BUT: bare edusitepro.edudashpro.org.za is the PLATFORM ADMIN domain, not a tenant!
+  else if ((hostname.includes('.edusitepro.org.za') || hostname.includes('.edusitepro.edudashpro.org.za')) 
+           && hostname !== 'edusitepro.edudashpro.org.za' 
+           && !hostname.startsWith('edusitepro.')) {
     const slug = hostname.split('.')[0];
     
     const { data: org } = await supabase
@@ -100,11 +102,13 @@ export async function middleware(request: NextRequest) {
     if (org) {
       tenantId = org.id;
       tenantSlug = org.slug;
-      console.log('[Middleware] Set tenant ID:', tenantId, `(${org.name} - subdomain)`);
+      console.log('[Middleware] Set tenant ID:', tenantId, `(${org.name} - subdomain: ${slug})`);
+    } else {
+      console.log('[Middleware] No organization found for slug:', slug);
     }
   }
   // Platform admin domain - NO tenant for /admin, but detect from user for /dashboard
-  else if (hostname === 'edusitepro.edudashpro.org.za') {
+  else if (hostname === 'edusitepro.edudashpro.org.za' || hostname === 'edusitepro.vercel.app') {
     // Platform admins accessing /admin should have no tenant context
     if (path.startsWith('/admin')) {
       console.log('[Middleware] Platform Admin domain (/admin) - NO tenant context');
