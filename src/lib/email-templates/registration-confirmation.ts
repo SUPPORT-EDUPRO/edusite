@@ -47,178 +47,172 @@ export function generateRegistrationConfirmation(data: RegistrationConfirmationD
   <table role="presentation" style="width: 100%; border-collapse: collapse;">
     <tr>
       <td align="center" style="padding: 0;">
-        <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 0; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+        <table role="presentation" style="max-width: 900px; width: 100%; background-color: #ffffff; border-radius: 0; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
           
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">Registration Received!</h1>
-              <p style="margin: 10px 0 0; color: #ffffff; font-size: 16px; opacity: 0.95;">Thank you for choosing ${schoolName}</p>
+            <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 50px 40px; text-align: center;">
+              <h1 style="margin: 0; color: #ffffff; font-size: 36px; font-weight: 700;">Registration Received!</h1>
+              <p style="margin: 15px 0 0; color: #ffffff; font-size: 20px; opacity: 0.95;">Thank you for choosing ${schoolName}</p>
             </td>
           </tr>
 
           <!-- Content -->
           <tr>
-            <td style="padding: 40px 30px;">
+            <td style="padding: 50px 40px;">
               
-              <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+              <p style="margin: 0 0 25px; color: #333333; font-size: 18px; line-height: 1.6;">
                 Dear ${parentName},
               </p>
 
-              <p style="margin: 0 0 20px; color: #333333; font-size: 16px; line-height: 1.6;">
+              <p style="margin: 0 0 25px; color: #333333; font-size: 18px; line-height: 1.6;">
                 We've successfully received your registration for <strong>${studentName}</strong>. Your application is now under review.
               </p>
 
+              <!-- To Complete Registration -->
+              <div style="width: 100%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 30px; margin: 40px 0; text-align: center;">
+                <h2 style="margin: 0 0 15px; color: #ffffff; font-size: 26px; font-weight: 700;">📋 To Complete Your Registration</h2>
+                <p style="margin: 0; color: #ffffff; font-size: 18px; opacity: 0.95;">Follow the steps below to finalize your application</p>
+              </div>
+
               <!-- Registration Fee -->
-              <table role="presentation" style="width: 100%; background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 30px 0;">
-                <tr>
-                  <td>
-                    <p style="margin: 0 0 10px; color: #555555; font-size: 14px;">
-                      <strong>Registration Reference:</strong><br>
-                      <span style="color: #667eea; font-size: 18px; font-family: 'Courier New', monospace; font-weight: bold;">${shortReference}</span>
-                    </p>
-                    <p style="margin: 15px 0 0; color: #555555; font-size: 14px;">
-                      <strong>Registration Fee:</strong><br>
-                      ${discountApplied 
-                        ? `<span style="text-decoration: line-through; color: #999; font-size: 14px;">R${originalFee.toFixed(2)}</span> <span style="color: #28a745; font-size: 20px; font-weight: bold;">R${registrationFee.toFixed(2)}</span> <span style="background-color: #d4edda; color: #155724; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;">50% OFF</span>`
-                        : `<span style="color: #333; font-size: 20px; font-weight: bold;">R${registrationFee.toFixed(2)}</span>`
-                      }
-                    </p>
-                  </td>
-                </tr>
-              </table>
+              <div style="width: 100%; background-color: #f8f9fa; border-radius: 8px; padding: 30px; margin: 40px 0;">
+                <p style="margin: 0 0 15px; color: #555555; font-size: 16px;">
+                  <strong>Registration Reference:</strong><br>
+                  <span style="color: #667eea; font-size: 24px; font-family: 'Courier New', monospace; font-weight: bold;">${paymentReference || shortReference}</span>
+                </p>
+                <p style="margin: 20px 0 0; color: #555555; font-size: 16px;">
+                  <strong>Registration Fee:</strong><br>
+                  ${discountApplied 
+                    ? `<span style="text-decoration: line-through; color: #999; font-size: 18px;">R${originalFee.toFixed(2)}</span> <span style="color: #28a745; font-size: 28px; font-weight: bold;">R${registrationFee.toFixed(2)}</span> <span style="background-color: #d4edda; color: #155724; padding: 6px 12px; border-radius: 4px; font-size: 16px; font-weight: bold;">50% OFF</span>`
+                    : `<span style="color: #333; font-size: 28px; font-weight: bold;">R${registrationFee.toFixed(2)}</span>`
+                  }
+                </p>
+              </div>
+
+              <!-- Step by Step Instructions -->
+              <div style="width: 100%; margin: 40px 0;">
+                <div style="background-color: #f8f9fa; border-left: 6px solid #667eea; padding: 30px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+                  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; width: 50px; height: 50px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; margin-bottom: 15px;">1</div>
+                  <h3 style="margin: 0 0 12px; color: #333333; font-size: 20px; font-weight: 600;">Make Your Payment</h3>
+                  <p style="margin: 0; color: #555555; font-size: 17px; line-height: 1.6;">
+                    Transfer <strong style="color: #28a745;">R${registrationFee.toFixed(2)}</strong> to the bank account below using the reference number <strong style="color: #667eea; font-family: 'Courier New', monospace;">${paymentReference || shortReference}</strong>
+                  </p>
+                </div>
+
+                <div style="background-color: #f8f9fa; border-left: 6px solid #28a745; padding: 30px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+                  <div style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%); color: white; width: 50px; height: 50px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; margin-bottom: 15px;">2</div>
+                  <h3 style="margin: 0 0 12px; color: #333333; font-size: 20px; font-weight: 600;">Save Your Proof of Payment</h3>
+                  <p style="margin: 0; color: #555555; font-size: 17px; line-height: 1.6;">
+                    After making the payment, take a screenshot or save the bank confirmation slip showing the transaction details
+                  </p>
+                </div>
+
+                <div style="background-color: #f8f9fa; border-left: 6px solid #ff9800; padding: 30px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
+                  <div style="background: linear-gradient(135deg, #ff9800 0%, #ff6f00 100%); color: white; width: 50px; height: 50px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; margin-bottom: 15px;">3</div>
+                  <h3 style="margin: 0 0 12px; color: #333333; font-size: 20px; font-weight: 600;">Upload Your Proof of Payment</h3>
+                  <p style="margin: 0 0 20px; color: #555555; font-size: 17px; line-height: 1.6;">
+                    Click the button below to upload your proof of payment. This step is required for approval.
+                  </p>
+                  <a href="https://edusitepro.edudashpro.org.za/upload-payment?ref=${paymentReference || registrationId}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 18px 45px; border-radius: 8px; font-weight: 700; font-size: 18px; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3);">
+                    📤 Upload Proof of Payment
+                  </a>
+                </div>
+
+                <div style="background-color: #f8f9fa; border-left: 6px solid #9c27b0; padding: 30px; border-radius: 8px; text-align: center;">
+                  <div style="background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%); color: white; width: 50px; height: 50px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 700; margin-bottom: 15px;">4</div>
+                  <h3 style="margin: 0 0 12px; color: #333333; font-size: 20px; font-weight: 600;">Wait for Approval</h3>
+                  <p style="margin: 0; color: #555555; font-size: 17px; line-height: 1.6;">
+                    Our team will verify your payment within <strong>1-2 business days</strong>. Once approved, you'll receive an email with your EduDash Pro login credentials to access your parent dashboard.
+                  </p>
+                </div>
+              </div>
 
               <!-- Payment Banking Details Box -->
-              <table role="presentation" style="width: 100%; background-color: #e8f5e9; border-radius: 8px; padding: 20px; margin: 30px 0; border-left: 4px solid #4caf50;">
-                <tr>
-                  <td>
-                    <h3 style="margin: 0 0 15px; color: #2e7d32; font-size: 16px; font-weight: 600;">💳 Payment Instructions</h3>
-                    <p style="margin: 0 0 15px; color: #555555; font-size: 14px; line-height: 1.6;">
-                      Please make your payment using the following banking details:
-                    </p>
-                    <table role="presentation" style="width: 100%; background-color: #ffffff; border-radius: 6px; padding: 15px; margin: 10px 0;">
-                      <tr>
-                        <td>
-                          <p style="margin: 0 0 8px; color: #2e7d32; font-size: 13px; font-weight: 600;">Bank:</p>
-                          <p style="margin: 0 0 12px; color: #333333; font-size: 15px; font-family: 'Courier New', monospace;">FNB</p>
-                          
-                          <p style="margin: 0 0 8px; color: #2e7d32; font-size: 13px; font-weight: 600;">Account Number:</p>
-                          <p style="margin: 0 0 12px; color: #333333; font-size: 15px; font-family: 'Courier New', monospace;">62777403181</p>
-                          
-                          <p style="margin: 0 0 8px; color: #2e7d32; font-size: 13px; font-weight: 600;">Branch Code:</p>
-                          <p style="margin: 0 0 12px; color: #333333; font-size: 15px; font-family: 'Courier New', monospace;">250655</p>
-                          
-                          <p style="margin: 0 0 8px; color: #2e7d32; font-size: 13px; font-weight: 600;">Account Name:</p>
-                          <p style="margin: 0 0 12px; color: #333333; font-size: 15px; font-family: 'Courier New', monospace;">Young Eagles Home Care Centre</p>
-                          
-                          <p style="margin: 0 0 8px; color: #2e7d32; font-size: 13px; font-weight: 600;">Payment Reference (IMPORTANT):</p>
-                          <p style="margin: 0; color: #d32f2f; font-size: 15px; font-family: 'Courier New', monospace; font-weight: 700;">${shortReference}</p>
-                        </td>
-                      </tr>
-                    </table>
-                    <div style="background-color: #fff3cd; border-left: 3px solid #ffc107; padding: 12px; margin: 15px 0; border-radius: 4px;">
-                      <p style="margin: 0; color: #856404; font-size: 13px; font-weight: 600;">
-                        ⚠️ CRITICAL: Use <span style="font-family: 'Courier New', monospace;">{shortReference}</span> as your payment reference. This links your payment to your registration.
-                      </p>
-                    </div>
-                    <div style="background-color: #e3f2fd; border-left: 3px solid #2196f3; padding: 12px; margin: 15px 0; border-radius: 4px;">
-                      <p style="margin: 0 0 8px; color: #0d47a1; font-size: 13px; font-weight: 600;">💳 Payment Method Fees:</p>
-                      <ul style="margin: 0; padding-left: 20px; color: #1565c0; font-size: 12px; line-height: 1.8;">
-                        <li><strong>Bank Transfer (EFT):</strong> FREE ✅</li>
-                        <li><strong>ATM Deposit:</strong> +R20.00 processing fee</li>
-                        <li><strong>Cash Payment:</strong> +R20.00 handling fee</li>
-                      </ul>
-                    </div>
-                  </td>
-                </tr>
-              </table>
-
-              <!-- Upload Proof of Payment Button -->
-              <table role="presentation" style="width: 100%; background-color: #fff3e0; border-radius: 8px; padding: 20px; margin: 30px 0; border-left: 4px solid #ff9800;">
-                <tr>
-                  <td>
-                    <h3 style="margin: 0 0 12px; color: #e65100; font-size: 18px; font-weight: 700;">🚨 ACTION REQUIRED: Upload Proof of Payment</h3>
-                    <p style="margin: 0 0 15px; color: #333333; font-size: 14px; line-height: 1.6; font-weight: 600;">
-                      After making your payment, you MUST upload proof of payment for your registration to be processed.
-                    </p>
-                    <div style="text-align: center; margin: 20px 0;">
-                      <a href="https://edusitepro.edudashpro.org.za/upload-payment?ref=${paymentReference || registrationId}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; text-decoration: none; padding: 18px 45px; border-radius: 8px; font-weight: 700; font-size: 18px; box-shadow: 0 4px 6px rgba(102, 126, 234, 0.3); text-align: center;">
-                        📤 Upload Proof of Payment Now
-                      </a>
-                    </div>
-                    <div style="background-color: #ffebee; border-left: 3px solid #f44336; padding: 12px; margin: 15px 0; border-radius: 4px;">
-                      <p style="margin: 0; color: #c62828; font-size: 13px; font-weight: 600; line-height: 1.5;">
-                        ⚠️ <strong>Important:</strong> Registration cannot be approved without proof of payment. Click the button above immediately after making your payment.
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              </table>
+              <div style="width: 95%; max-width: 850px; background-color: #e8f5e9; border-radius: 8px; padding: 30px 10px; margin: 40px auto 40px 0; border-left: 6px solid #4caf50; text-align: center;">
+                <h3 style="margin: 0 0 20px; color: #2e7d32; font-size: 22px; font-weight: 600;">💳 Banking Details</h3>
+                <p style="margin: 0 0 20px; color: #555555; font-size: 17px; line-height: 1.6;">
+                  Use these details to make your payment:
+                </p>
+                
+                <p style="margin: 0 0 12px; color: #2e7d32; font-size: 16px; font-weight: 600;">Bank:</p>
+                <p style="margin: 0 0 20px; color: #333333; font-size: 18px; font-family: 'Courier New', monospace;">FNB</p>
+                
+                <p style="margin: 0 0 12px; color: #2e7d32; font-size: 16px; font-weight: 600;">Account Number:</p>
+                <p style="margin: 0 0 20px; color: #333333; font-size: 18px; font-family: 'Courier New', monospace;">62777403181</p>
+                
+                <p style="margin: 0 0 12px; color: #2e7d32; font-size: 16px; font-weight: 600;">Branch Code:</p>
+                <p style="margin: 0 0 20px; color: #333333; font-size: 18px; font-family: 'Courier New', monospace;">250655</p>
+                
+                <p style="margin: 0 0 12px; color: #2e7d32; font-size: 16px; font-weight: 600;">Account Name:</p>
+                <p style="margin: 0 0 20px; color: #333333; font-size: 18px; font-family: 'Courier New', monospace;">Young Eagles Home Care Centre</p>
+                
+                <p style="margin: 0 0 12px; color: #2e7d32; font-size: 16px; font-weight: 600;">Payment Reference:</p>
+                <p style="margin: 0 0 20px; color: #d32f2f; font-size: 20px; font-family: 'Courier New', monospace; font-weight: 700;">${paymentReference || shortReference}</p>
+                
+                <div style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 18px; margin: 20px 0; border-radius: 4px;">
+                  <p style="margin: 0 0 12px; color: #0d47a1; font-size: 16px; font-weight: 600;">💳 Payment Method Fees:</p>
+                  <ul style="margin: 0; padding-left: 24px; color: #1565c0; font-size: 15px; line-height: 2;">
+                    <li><strong>Bank Transfer (EFT):</strong> FREE ✅</li>
+                    <li><strong>ATM Deposit:</strong> +R20.00 processing fee</li>
+                    <li><strong>Cash Payment:</strong> +R20.00 handling fee</li>
+                  </ul>
+                </div>
+              </div>
 
               <!-- Monthly Pricing Information -->
-              <table role="presentation" style="width: 100%; background-color: #f3e5f5; border-radius: 8px; padding: 20px; margin: 30px 0; border-left: 4px solid #9c27b0;">
-                <tr>
-                  <td>
-                    <h3 style="margin: 0 0 15px; color: #6a1b9a; font-size: 16px; font-weight: 600;">💰 Monthly Fee Structure</h3>
-                    <table role="presentation" style="width: 100%; background-color: #ffffff; border-radius: 6px; padding: 15px; margin: 10px 0;">
-                      <tr>
-                        <td>
-                          <table style="width: 100%; border-collapse: collapse;">
-                            <tr style="border-bottom: 2px solid #f5f5f5;">
-                              <td style="padding: 12px 8px; color: #6a1b9a; font-size: 13px; font-weight: 600;">Age Group</td>
-                              <td style="padding: 12px 8px; color: #6a1b9a; font-size: 13px; font-weight: 600; text-align: right;">Monthly Fee</td>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #f5f5f5;">
-                              <td style="padding: 10px 8px; color: #333333; font-size: 14px;">6 months - 1 year</td>
-                              <td style="padding: 10px 8px; color: #333333; font-size: 14px; font-weight: 600; text-align: right;">R850.00</td>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #f5f5f5;">
-                              <td style="padding: 10px 8px; color: #333333; font-size: 14px;">1 - 3 years</td>
-                              <td style="padding: 10px 8px; color: #333333; font-size: 14px; font-weight: 600; text-align: right;">R720.00</td>
-                            </tr>
-                            <tr>
-                              <td style="padding: 10px 8px; color: #333333; font-size: 14px;">4 - 6 years</td>
-                              <td style="padding: 10px 8px; color: #333333; font-size: 14px; font-weight: 600; text-align: right;">R680.00</td>
-                            </tr>
-                          </table>
-                        </td>
-                      </tr>
-                    </table>
-                    <p style="margin: 15px 0 0; color: #555555; font-size: 12px; font-style: italic;">
-                      💡 Monthly fees are charged in addition to the one-time registration fee.
-                    </p>
-                  </td>
-                </tr>
-              </table>
+              <div style="width: 95%; max-width: 850px; background-color: #f3e5f5; border-radius: 8px; padding: 30px 10px; margin: 40px auto 40px 0; border-left: 6px solid #9c27b0; text-align: center;">
+                <h3 style="margin: 0 0 20px; color: #6a1b9a; font-size: 22px; font-weight: 600;">💰 Monthly Fee Structure</h3>
+                
+                <div style="border-bottom: 3px solid #e1bee7; padding-bottom: 12px; margin-bottom: 12px;">
+                  <p style="margin: 0; color: #6a1b9a; font-size: 16px; font-weight: 600; display: inline-block; width: 60%;">Age Group</p>
+                  <p style="margin: 0; color: #6a1b9a; font-size: 16px; font-weight: 600; display: inline-block; width: 38%; text-align: right;">Monthly Fee</p>
+                </div>
+                
+                <div style="padding: 15px 0; border-bottom: 1px solid #e1bee7;">
+                  <p style="margin: 0; color: #333333; font-size: 17px; display: inline-block; width: 60%;">6 months - 1 year</p>
+                  <p style="margin: 0; color: #333333; font-size: 18px; font-weight: 600; display: inline-block; width: 38%; text-align: right;">R850.00</p>
+                </div>
+                
+                <div style="padding: 15px 0; border-bottom: 1px solid #e1bee7;">
+                  <p style="margin: 0; color: #333333; font-size: 17px; display: inline-block; width: 60%;">1 - 3 years</p>
+                  <p style="margin: 0; color: #333333; font-size: 18px; font-weight: 600; display: inline-block; width: 38%; text-align: right;">R720.00</p>
+                </div>
+                
+                <div style="padding: 15px 0;">
+                  <p style="margin: 0; color: #333333; font-size: 17px; display: inline-block; width: 60%;">4 - 6 years</p>
+                  <p style="margin: 0; color: #333333; font-size: 18px; font-weight: 600; display: inline-block; width: 38%; text-align: right;">R680.00</p>
+                </div>
+                
+                <p style="margin: 20px 0 0; color: #555555; font-size: 15px; font-style: italic;">
+                  💡 Monthly fees are charged in addition to the one-time registration fee.
+                </p>
+              </div>
 
               <!-- Support -->
-              <table role="presentation" style="width: 100%; background-color: #e3f2fd; border-radius: 8px; padding: 20px; margin: 30px 0; border-left: 4px solid #2196f3;">
-                <tr>
-                  <td>
-                    <h3 style="margin: 0 0 10px; color: #0d47a1; font-size: 16px; font-weight: 600;">💬 Need Help?</h3>
-                    <p style="margin: 0 0 15px; color: #555555; font-size: 14px; line-height: 1.6;">
-                      If you have questions about payment, the registration process, or need assistance uploading your proof of payment, please contact:
-                    </p>
-                    <div style="margin: 15px 0;">
-                      <p style="margin: 0 0 8px; color: #555555; font-size: 14px;">
-                        📧 <a href="mailto:admin@youngeagles.org.za" style="color: #667eea; text-decoration: none;">admin@youngeagles.org.za</a>
-                      </p>
-                      <p style="margin: 0 0 8px; color: #555555; font-size: 14px;">
-                        📞 <a href="tel:+27604828855" style="color: #667eea; text-decoration: none;">+27 60 482 8855</a> / <a href="tel:+27820673133" style="color: #667eea; text-decoration: none;">+27 82 067 3133</a>
-                      </p>
-                      <a href="https://wa.me/27604828855?text=Hi%2C%20I%20have%20a%20question%20about%20my%20registration%20(${registrationId})" style="display: inline-block; margin-top: 12px; background-color: #25D366; color: white; padding: 10px 20px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 14px;">
-                        💬 Chat on WhatsApp
-                      </a>
-                    </div>
-                  </td>
-                </tr>
-              </table>
+              <div style="width: 95%; max-width: 850px; background-color: #e3f2fd; border-radius: 8px; padding: 30px 10px; margin: 40px auto 40px 0; border-left: 6px solid #2196f3; text-align: center;">
+                <h3 style="margin: 0 0 15px; color: #0d47a1; font-size: 22px; font-weight: 600;">💬 Need Help?</h3>
+                <p style="margin: 0 0 20px; color: #555555; font-size: 17px; line-height: 1.6;">
+                  If you have questions about payment, the registration process, or need assistance uploading your proof of payment, please contact:
+                </p>
+                <div style="margin: 20px 0;">
+                  <p style="margin: 0 0 12px; color: #555555; font-size: 17px;">
+                    📧 <a href="mailto:admin@youngeagles.org.za" style="color: #667eea; text-decoration: none; font-size: 17px;">admin@youngeagles.org.za</a>
+                  </p>
+                  <p style="margin: 0 0 12px; color: #555555; font-size: 17px;">
+                    📞 <a href="tel:+27604828855" style="color: #667eea; text-decoration: none; font-size: 17px;">+27 60 482 8855</a> / <a href="tel:+27820673133" style="color: #667eea; text-decoration: none; font-size: 17px;">+27 82 067 3133</a>
+                  </p>
+                  <a href="https://wa.me/27604828855?text=Hi%2C%20I%20have%20a%20question%20about%20my%20registration%20(${registrationId})" style="display: inline-block; margin-top: 15px; background-color: #25D366; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 17px;">
+                    💬 Chat on WhatsApp
+                  </a>
+                </div>
+              </div>
 
-              <p style="margin: 30px 0 0; color: #333333; font-size: 16px; line-height: 1.6;">
+              <p style="margin: 40px 0 0; color: #333333; font-size: 18px; line-height: 1.6; text-align: center;">
                 Thank you for choosing ${schoolName}. We look forward to welcoming ${studentName} to our learning community!
               </p>
 
-              <p style="margin: 20px 0 0; color: #333333; font-size: 16px; line-height: 1.6;">
+              <p style="margin: 25px 0 0; color: #333333; font-size: 18px; line-height: 1.6; text-align: center;">
                 Best regards,<br>
                 <strong>${schoolName} Admin Team</strong>
               </p>
