@@ -165,12 +165,12 @@ export default function Footer() {
                 Contact Us
               </a>
               <span className="text-stone-300">|</span>
-              <Link
-                href="/admin"
+              <a
+                href="https://edusitepro.edudashpro.org.za/admin"
                 className="text-sm text-stone-600 transition-colors hover:text-amber-600"
               >
                 Admin
-              </Link>
+              </a>
               <span className="text-stone-300">|</span>
               <p className="text-sm text-stone-600">🇿🇦 Proudly South African</p>
             </div>
