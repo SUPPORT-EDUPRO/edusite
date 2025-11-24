@@ -2157,4 +2157,139 @@ export function PublicRegistrationForm({
                             </svg>
                           </button>
                           <h2 class="text-2xl font-bold text-gray-900 dark:text-white mb-4">Terms and Conditions</h2>
-                          <div class="prose dark:prose-invert max-w-none whitespace-pre-wrap text-sm">${organizationBr
+                          <div class="prose dark:prose-invert max-w-none whitespace-pre-wrap text-sm">${organizationBranding.terms_and_conditions_text}</div>
+                        </div>
+                      `;
+                      document.body.appendChild(modal);
+                      modal.addEventListener('click', (event) => {
+                        if (event.target === modal) modal.remove();
+                      });
+                    }}
+                    className="text-teal-600 underline hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
+                  >
+                    terms and conditions
+                  </button>
+                ) : (
+                  <span className="text-teal-600 underline">terms and conditions</span>
+                )}{' '}
+                and confirm that all information provided is accurate <span className="text-red-500">*</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Submit Button */}
+      <div className="border-t border-gray-200 pt-6 dark:border-gray-700">
+        {/* Registration Fee Summary */}
+        <div className="mb-6 overflow-hidden rounded-xl border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-pink-50 shadow-lg dark:border-purple-700 dark:from-purple-900/30 dark:to-pink-900/30">
+          <div className="px-5 py-6">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-600 text-white text-xl">
+                💰
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                  Registration Fee Summary
+                </h3>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  One-time registration fee (non-refundable)
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between rounded-lg bg-white dark:bg-gray-800 px-4 py-3 shadow-sm">
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Base Registration Fee
+                </span>
+                <span className={`text-lg font-bold ${campaignInfo?.valid ? 'text-gray-400 line-through dark:text-gray-600' : 'text-gray-900 dark:text-white'}`}>
+                  R400.00
+                </span>
+              </div>
+
+              {campaignInfo?.valid && (
+                <div className="flex items-center justify-between rounded-lg bg-green-100 dark:bg-green-900/30 px-4 py-3 shadow-sm border border-green-300 dark:border-green-700">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-medium text-green-800 dark:text-green-300">
+                      {formData.couponCode.toUpperCase()} Discount ({campaignInfo.discount}% off)
+                    </span>
+                  </div>
+                  <span className="text-lg font-bold text-green-700 dark:text-green-400">
+                    -R{(400 * campaignInfo.discount / 100).toFixed(2)}
+                  </span>
+                </div>
+              )}
+
+              <div className="border-t-2 border-dashed border-purple-300 dark:border-purple-700 pt-3">
+                <div className="flex items-center justify-between rounded-lg bg-purple-100 dark:bg-purple-900/40 px-4 py-4 border-2 border-purple-400 dark:border-purple-600">
+                  <span className="text-base font-bold text-purple-900 dark:text-purple-200">
+                    Total Amount Due
+                  </span>
+                  <div className="text-right">
+                    <span className="text-3xl font-extrabold text-purple-700 dark:text-purple-300">
+                      R{campaignInfo?.valid ? (400 * (1 - campaignInfo.discount / 100)).toFixed(2) : '400.00'}
+                    </span>
+                    {campaignInfo?.valid && (
+                      <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mt-1">
+                        🎉 You saved R{(400 * campaignInfo.discount / 100).toFixed(2)}!
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {!campaignInfo && formData.couponCode && !validatingCoupon && (
+                <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 px-4 py-3">
+                  <p className="text-xs text-yellow-800 dark:text-yellow-300">
+                    ⚠️ Promo code "{formData.couponCode}" is invalid or expired. Full fee of R400 will apply.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <p className="mt-4 text-xs text-center text-gray-600 dark:text-gray-400">
+              💳 Payment details will be sent to your email after submission
+            </p>
+          </div>
+        </div>
+
+        <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />
+            <p className="text-sm text-blue-800 dark:text-blue-200">
+              By submitting this form, you confirm that all information provided is accurate. You
+              will receive a confirmation email within 24 hours. Our admissions team will review
+              your application and contact you within 2-3 business days.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading || !isFormValid()}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-3 font-semibold text-white transition duration-200 hover:from-blue-700 hover:to-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Submitting Registration...
+            </>
+          ) : (
+            <>
+              <Check className="h-5 w-5" />
+              Submit Registration
+            </>
+          )}
+        </button>
+
+        {!isFormValid() && !loading && (
+          <p className="mt-2 text-center text-sm text-amber-600 dark:text-amber-400">
+            Please fill in all required fields marked with <span className="text-red-500">*</span>
+          </p>
+        )}
+      </div>
+    </form>
+  );
+}
