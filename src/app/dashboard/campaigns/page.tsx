@@ -8,14 +8,18 @@ import { Plus, Edit2, Trash2, Calendar, Tag, TrendingUp, Users, Check, X, Chevro
 interface Campaign {
   id: string;
   organization_id: string;
-  campaign_name: string;
-  coupon_code: string;
-  discount_percentage: number;
-  max_uses: number | null;
-  current_uses: number;
-  valid_from: string;
-  valid_until: string;
-  is_active: boolean;
+  name: string;
+  promo_code: string;
+  campaign_type: string;
+  description?: string;
+  terms_conditions?: string;
+  discount_type: 'percentage' | 'fixed_amount';
+  discount_value: number;
+  max_redemptions: number | null;
+  current_redemptions: number;
+  start_date: string;
+  end_date: string;
+  active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -32,13 +36,17 @@ export default function CampaignsPage() {
 
   // Form state
   const [formData, setFormData] = useState({
-    campaign_name: '',
-    coupon_code: '',
-    discount_percentage: 10,
-    max_uses: '',
-    valid_from: '',
-    valid_until: '',
-    is_active: true,
+    name: '',
+    promo_code: '',
+    campaign_type: 'early_bird',
+    description: '',
+    terms_conditions: '',
+    discount_type: 'percentage' as 'percentage' | 'fixed_amount',
+    discount_value: 20,
+    max_redemptions: '',
+    start_date: '',
+    end_date: '',
+    active: true,
   });
 
   // Check auth and get organization_id
@@ -95,27 +103,31 @@ export default function CampaignsPage() {
         .from('marketing_campaigns')
         .insert({
           organization_id: organizationId,
-          campaign_name: formData.campaign_name,
-          coupon_code: formData.coupon_code.toUpperCase(),
-          discount_percentage: formData.discount_percentage,
-          max_uses: formData.max_uses ? parseInt(formData.max_uses) : null,
-          valid_from: formData.valid_from,
-          valid_until: formData.valid_until,
-          is_active: formData.is_active,
-          current_uses: 0,
+          name: formData.name,
+          promo_code: formData.promo_code.toUpperCase(),
+          discount_value: formData.discount_value,
+          max_redemptions: formData.max_redemptions ? parseInt(formData.max_redemptions) : null,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          active: formData.active,
+          current_redemptions: 0,
         });
 
       if (error) throw error;
 
       // Reset form
       setFormData({
-        campaign_name: '',
-        coupon_code: '',
-        discount_percentage: 10,
-        max_uses: '',
-        valid_from: '',
-        valid_until: '',
-        is_active: true,
+        name: '',
+        promo_code: '',
+        campaign_type: 'early_bird',
+        description: '',
+        terms_conditions: '',
+        discount_type: 'percentage',
+        discount_value: 20,
+        max_redemptions: '',
+        start_date: '',
+        end_date: '',
+        active: true,
       });
       setShowCreateModal(false);
       loadCampaigns(organizationId);
@@ -133,13 +145,13 @@ export default function CampaignsPage() {
       const { error } = await supabase
         .from('marketing_campaigns')
         .update({
-          campaign_name: formData.campaign_name,
-          coupon_code: formData.coupon_code.toUpperCase(),
-          discount_percentage: formData.discount_percentage,
-          max_uses: formData.max_uses ? parseInt(formData.max_uses) : null,
-          valid_from: formData.valid_from,
-          valid_until: formData.valid_until,
-          is_active: formData.is_active,
+          name: formData.name,
+          promo_code: formData.promo_code.toUpperCase(),
+          discount_value: formData.discount_value,
+          max_redemptions: formData.max_redemptions ? parseInt(formData.max_redemptions) : null,
+          start_date: formData.start_date,
+          end_date: formData.end_date,
+          active: formData.active,
         })
         .eq('id', editingCampaign.id);
 
@@ -147,13 +159,17 @@ export default function CampaignsPage() {
 
       setEditingCampaign(null);
       setFormData({
-        campaign_name: '',
-        coupon_code: '',
-        discount_percentage: 10,
-        max_uses: '',
-        valid_from: '',
-        valid_until: '',
-        is_active: true,
+        name: '',
+        promo_code: '',
+        campaign_type: 'early_bird',
+        description: '',
+        terms_conditions: '',
+        discount_type: 'percentage',
+        discount_value: 20,
+        max_redemptions: '',
+        start_date: '',
+        end_date: '',
+        active: true,
       });
       loadCampaigns(organizationId);
     } catch (error) {
@@ -186,7 +202,7 @@ export default function CampaignsPage() {
     try {
       const { error } = await supabase
         .from('marketing_campaigns')
-        .update({ is_active: !campaign.is_active })
+        .update({ active: !campaign.active })
         .eq('id', campaign.id);
 
       if (error) throw error;
@@ -199,26 +215,34 @@ export default function CampaignsPage() {
   const startEdit = (campaign: Campaign) => {
     setEditingCampaign(campaign);
     setFormData({
-      campaign_name: campaign.campaign_name,
-      coupon_code: campaign.coupon_code,
-      discount_percentage: campaign.discount_percentage,
-      max_uses: campaign.max_uses?.toString() || '',
-      valid_from: campaign.valid_from,
-      valid_until: campaign.valid_until,
-      is_active: campaign.is_active,
+      name: campaign.name,
+      promo_code: campaign.promo_code,
+      campaign_type: campaign.campaign_type,
+      description: campaign.description || '',
+      terms_conditions: campaign.terms_conditions || '',
+      discount_type: campaign.discount_type,
+      discount_value: campaign.discount_value,
+      max_redemptions: campaign.max_redemptions?.toString() || '',
+      start_date: campaign.start_date?.split('T')[0] || '',
+      end_date: campaign.end_date?.split('T')[0] || '',
+      active: campaign.active,
     });
   };
 
   const cancelEdit = () => {
     setEditingCampaign(null);
     setFormData({
-      campaign_name: '',
-      coupon_code: '',
-      discount_percentage: 10,
-      max_uses: '',
-      valid_from: '',
-      valid_until: '',
-      is_active: true,
+      name: '',
+      promo_code: '',
+      campaign_type: 'early_bird',
+      description: '',
+      terms_conditions: '',
+      discount_type: 'percentage',
+      discount_value: 20,
+      max_redemptions: '',
+      start_date: '',
+      end_date: '',
+      active: true,
     });
   };
 
@@ -233,16 +257,16 @@ export default function CampaignsPage() {
   };
 
   const getUsagePercentage = (campaign: Campaign) => {
-    if (!campaign.max_uses) return 0;
-    return (campaign.current_uses / campaign.max_uses) * 100;
+    if (!campaign.max_redemptions) return 0;
+    return (campaign.current_redemptions / campaign.max_redemptions) * 100;
   };
 
   const isExpired = (campaign: Campaign) => {
-    return new Date(campaign.valid_until) < new Date();
+    return new Date(campaign.end_date) < new Date();
   };
 
   const isUpcoming = (campaign: Campaign) => {
-    return new Date(campaign.valid_from) > new Date();
+    return new Date(campaign.start_date) > new Date();
   };
 
   if (loading) {
@@ -296,7 +320,7 @@ export default function CampaignsPage() {
             <div>
               <p className="text-xs text-stone-600">Active Campaigns</p>
               <p className="text-xl font-bold text-stone-900">
-                {campaigns.filter((c) => c.is_active && !isExpired(c)).length}
+                {campaigns.filter((c) => c.active && !isExpired(c)).length}
               </p>
             </div>
           </div>
@@ -309,7 +333,7 @@ export default function CampaignsPage() {
             <div>
               <p className="text-xs text-stone-600">Total Redemptions</p>
               <p className="text-xl font-bold text-stone-900">
-                {campaigns.reduce((sum, c) => sum + c.current_uses, 0)}
+                {campaigns.reduce((sum, c) => sum + c.current_redemptions, 0)}
               </p>
             </div>
           </div>
@@ -359,9 +383,9 @@ export default function CampaignsPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
                       <h3 className="text-lg font-semibold text-stone-900 truncate">
-                        {campaign.campaign_name}
+                        {campaign.name}
                       </h3>
-                      {campaign.is_active && !isExpired(campaign) && !isUpcoming(campaign) && (
+                      {campaign.active && !isExpired(campaign) && !isUpcoming(campaign) && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700">
                           <Check size={12} />
                           Active
@@ -379,7 +403,7 @@ export default function CampaignsPage() {
                           Upcoming
                         </span>
                       )}
-                      {!campaign.is_active && !isExpired(campaign) && (
+                      {!campaign.active && !isExpired(campaign) && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-stone-100 px-2 py-1 text-xs font-medium text-stone-700">
                           Inactive
                         </span>
@@ -388,17 +412,17 @@ export default function CampaignsPage() {
                     <div className="flex flex-wrap items-center gap-4 text-sm text-stone-600">
                       <div className="flex items-center gap-2">
                         <Tag size={16} />
-                        <span className="font-mono font-semibold">{campaign.coupon_code}</span>
+                        <span className="font-mono font-semibold">{campaign.promo_code}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <TrendingUp size={16} />
-                        <span>{campaign.discount_percentage}% off</span>
+                        <span>{campaign.discount_value}% off</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Users size={16} />
                         <span>
-                          {campaign.current_uses}
-                          {campaign.max_uses ? ` / ${campaign.max_uses}` : ''} uses
+                          {campaign.current_redemptions}
+                          {campaign.max_redemptions ? ` / ${campaign.max_redemptions}` : ''} uses
                         </span>
                       </div>
                     </div>
@@ -418,13 +442,13 @@ export default function CampaignsPage() {
                     <button
                       onClick={() => handleToggleActive(campaign)}
                       className={`p-2 rounded-lg transition-colors ${
-                        campaign.is_active
+                        campaign.active
                           ? 'text-green-600 hover:bg-green-50'
                           : 'text-stone-400 hover:bg-stone-100'
                       }`}
-                      title={campaign.is_active ? 'Deactivate' : 'Activate'}
+                      title={campaign.active ? 'Deactivate' : 'Activate'}
                     >
-                      {campaign.is_active ? <Check size={20} /> : <X size={20} />}
+                      {campaign.active ? <Check size={20} /> : <X size={20} />}
                     </button>
                     <button
                       onClick={() => startEdit(campaign)}
@@ -444,7 +468,7 @@ export default function CampaignsPage() {
                 </div>
 
                 {/* Usage Progress Bar */}
-                {campaign.max_uses && (
+                {campaign.max_redemptions && (
                   <div className="mt-3">
                     <div className="flex items-center justify-between mb-1 text-xs text-stone-600">
                       <span>Usage</span>
@@ -472,7 +496,7 @@ export default function CampaignsPage() {
                       <div>
                         <p className="text-xs font-medium text-stone-600 mb-1">Valid From</p>
                         <p className="text-sm text-stone-900">
-                          {new Date(campaign.valid_from).toLocaleDateString('en-ZA', {
+                          {new Date(campaign.start_date).toLocaleDateString('en-ZA', {
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric',
@@ -482,7 +506,7 @@ export default function CampaignsPage() {
                       <div>
                         <p className="text-xs font-medium text-stone-600 mb-1">Valid Until</p>
                         <p className="text-sm text-stone-900">
-                          {new Date(campaign.valid_until).toLocaleDateString('en-ZA', {
+                          {new Date(campaign.end_date).toLocaleDateString('en-ZA', {
                             year: 'numeric',
                             month: 'long',
                             day: 'numeric',
@@ -535,8 +559,8 @@ export default function CampaignsPage() {
                 <input
                   type="text"
                   required
-                  value={formData.campaign_name}
-                  onChange={(e) => setFormData({ ...formData, campaign_name: e.target.value })}
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                   placeholder="e.g., Early Bird Registration"
                 />
@@ -549,8 +573,8 @@ export default function CampaignsPage() {
                 <input
                   type="text"
                   required
-                  value={formData.coupon_code}
-                  onChange={(e) => setFormData({ ...formData, coupon_code: e.target.value.toUpperCase() })}
+                  value={formData.promo_code}
+                  onChange={(e) => setFormData({ ...formData, promo_code: e.target.value.toUpperCase() })}
                   className="w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 font-mono focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                   placeholder="e.g., EARLYBIRD2025"
                 />
@@ -565,8 +589,8 @@ export default function CampaignsPage() {
                   required
                   min="1"
                   max="100"
-                  value={formData.discount_percentage}
-                  onChange={(e) => setFormData({ ...formData, discount_percentage: parseInt(e.target.value) })}
+                  value={formData.discount_value}
+                  onChange={(e) => setFormData({ ...formData, discount_value: parseInt(e.target.value) })}
                   className="w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                 />
               </div>
@@ -578,8 +602,8 @@ export default function CampaignsPage() {
                 <input
                   type="number"
                   min="1"
-                  value={formData.max_uses}
-                  onChange={(e) => setFormData({ ...formData, max_uses: e.target.value })}
+                  value={formData.max_redemptions}
+                  onChange={(e) => setFormData({ ...formData, max_redemptions: e.target.value })}
                   className="w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                   placeholder="Leave empty for unlimited"
                 />
@@ -593,8 +617,8 @@ export default function CampaignsPage() {
                   <input
                     type="date"
                     required
-                    value={formData.valid_from}
-                    onChange={(e) => setFormData({ ...formData, valid_from: e.target.value })}
+                    value={formData.start_date}
+                    onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
                     className="w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                   />
                 </div>
@@ -605,8 +629,8 @@ export default function CampaignsPage() {
                   <input
                     type="date"
                     required
-                    value={formData.valid_until}
-                    onChange={(e) => setFormData({ ...formData, valid_until: e.target.value })}
+                    value={formData.end_date}
+                    onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                     className="w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                   />
                 </div>
@@ -615,12 +639,12 @@ export default function CampaignsPage() {
               <div className="flex items-center gap-2">
                 <input
                   type="checkbox"
-                  id="is_active"
-                  checked={formData.is_active}
-                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
+                  id="active"
+                  checked={formData.active}
+                  onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
                   className="h-4 w-4 rounded border-stone-300 text-amber-600 focus:ring-amber-500"
                 />
-                <label htmlFor="is_active" className="text-sm font-medium text-stone-700">
+                <label htmlFor="active" className="text-sm font-medium text-stone-700">
                   Active campaign
                 </label>
               </div>
