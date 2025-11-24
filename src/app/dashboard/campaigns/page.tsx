@@ -141,12 +141,19 @@ export default function CampaignsPage() {
     e.preventDefault();
     if (!editingCampaign) return;
 
+    console.log('[Campaign Update] Starting update for:', editingCampaign.id);
+    console.log('[Campaign Update] Form data:', formData);
+
     try {
       const { error } = await supabase
         .from('marketing_campaigns')
         .update({
           name: formData.name,
           promo_code: formData.promo_code.toUpperCase(),
+          campaign_type: formData.campaign_type,
+          description: formData.description,
+          terms_conditions: formData.terms_conditions,
+          discount_type: formData.discount_type,
           discount_value: formData.discount_value,
           max_redemptions: formData.max_redemptions ? parseInt(formData.max_redemptions) : null,
           start_date: formData.start_date,
@@ -155,8 +162,12 @@ export default function CampaignsPage() {
         })
         .eq('id', editingCampaign.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[Campaign Update] Error:', error);
+        throw error;
+      }
 
+      console.log('[Campaign Update] Success! Reloading campaigns...');
       setEditingCampaign(null);
       setFormData({
         name: '',
