@@ -842,23 +842,19 @@ export function PublicRegistrationForm({
             
             <div className="flex flex-col gap-3">
               <a
-                href="https://edudashpro.org.za"
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`mailto:${formData.guardianEmail}?subject=Registration%20Approved%20for%20${formData.studentFirstName}%20${formData.studentLastName}&body=Thank%20you%20for%20registering%20at%20${encodeURIComponent(schoolName)}.%0A%0APlease%20check%20your%20email%20for%20the%20approval%20notification%20and%20next%20steps.`}
                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-3 text-sm font-semibold text-white transition hover:from-purple-700 hover:to-pink-700"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
                 </svg>
-                Open EduDash Pro Web App
+                Go to Email
               </a>
               
               <p className="text-center text-xs text-gray-600 dark:text-gray-400">
-                Access the app from any device - desktop, tablet, or mobile browser.
+                Click the button above to open your email app and check for your registration confirmation.
                 <br />
-                <strong>Mobile users:</strong> Tap "Add to Home Screen" for app-like experience!
+                <strong>Important:</strong> You will receive login details via email once your registration is approved.
               </p>
               
               <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
