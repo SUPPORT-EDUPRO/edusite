@@ -59,22 +59,38 @@ export default async function AdminLayout({
   }
 
   // Determine if this is platform admin or tenant admin
-  const isPlatformAdmin = profile.role === 'superadmin' && !tenantId;
-  const isTenantAdmin = tenantId && profile.organization_id === tenantId;
+  const isPlatformAdmin = profile.role === 'superadmin';
+  
+  // If tenant admin without tenantId in URL, redirect to their org's admin panel
+  if (!isPlatformAdmin && !tenantId && profile.organization_id) {
+    // Get organization slug and redirect
+    const { data: org } = await supabase
+      .from('organizations')
+      .select('slug')
+      .eq('id', profile.organization_id)
+      .single();
+    
+    if (org?.slug) {
+      redirect(`https://${org.slug}.edusitepro.edudashpro.org.za/admin`);
+    }
+  }
+  
+  // Check if user has access to this specific tenant
+  const isTenantAdmin = tenantId ? profile.organization_id === tenantId : false;
 
-  // If not platform admin and not matching tenant, show error
-  if (!isPlatformAdmin && !isTenantAdmin) {
+  // If accessing a tenant admin panel and don't have access, show error
+  if (tenantId && !isPlatformAdmin && !isTenantAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <div className="bg-white p-8 rounded-lg shadow-lg max-w-md">
           <h1 className="text-2xl font-bold text-red-600 mb-4">Access Denied</h1>
           <p className="text-gray-600 mb-4">
-            You don't have access to this {tenantId ? "organization's" : "platform"} admin panel.
+            You don't have access to this organization's admin panel.
           </p>
           <div className="space-y-2">
             <p className="text-sm text-gray-500">Your role: <strong>{profile?.role || 'none'}</strong></p>
             <p className="text-sm text-gray-500">Your org: <strong>{profile?.organization_id || 'none'}</strong></p>
-            <p className="text-sm text-gray-500">Required org: <strong>{tenantId || 'platform (no tenant)'}</strong></p>
+            <p className="text-sm text-gray-500">Required org: <strong>{tenantId}</strong></p>
           </div>
           <a
             href="/"

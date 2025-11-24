@@ -216,6 +216,7 @@ export async function POST(request: NextRequest) {
         status: 'approved',
         reviewed_date: new Date().toISOString(),
         reviewed_by: session.user.id,
+        approved_from_edusite: true, // Flag to indicate approval came from EduSitePro (not EduDashPro)
       })
       .eq('id', registrationId);
 
@@ -226,7 +227,11 @@ export async function POST(request: NextRequest) {
     // Define PWA URL for response - use edudashpro.org.za as the main app domain
     const pwaUrl = 'https://edudashpro.org.za';
 
-    // 10. Send welcome email
+    // 10. Send welcome email ONLY if this approval is from EduSitePro (not synced from EduDashPro)
+    // If synced_from_edusite is true, EduDashPro already sent the email
+    if (registration.synced_from_edusite || registration.edudash_parent_id) {
+      console.log('[approve] Skipping email - already handled by EduDashPro');
+    } else {
     try {
       // Get organization details for school name
       const { data: orgData } = await supabase
@@ -279,6 +284,7 @@ export async function POST(request: NextRequest) {
       console.error('Email sending error:', emailError);
       // Don't fail the approval if email fails
     }
+    } // End of email sending block
 
     return NextResponse.json({
       success: true,
