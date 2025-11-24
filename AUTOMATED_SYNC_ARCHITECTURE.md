@@ -67,36 +67,45 @@ This document provides a visual overview of the automated bidirectional sync sys
     Fields: 49 dedicated columns (no JSONB extras)
     ↓
 
-5️⃣  Database trigger fires
-    Trigger: on_registration_submitted (AFTER INSERT)
-    Function: notify_registration_submission()
-    Action: Calls Edge Function via pg_net.http_post
+5️⃣  Database trigger fires AUTOMATICALLY ✨
+    Trigger: on_registration_insert_sync_to_edudash (AFTER INSERT)
+    Function: trigger_sync_registration_to_edudash()
+    Action: Calls Edge Function via net.http_post
+    Deployed: 2025-11-24 with --no-verify-jwt flag
     ↓
 
 6️⃣  Edge Function: sync-registration-to-edudash
     Input: Full registration record from EduSitePro
     Process:
     - Validates organization_id
-    - Maps fields between schemas
-    - Creates record in EduDashPro
+    - Maps all 49 fields between schemas
+    - Uses UPSERT to handle duplicates
+    - Sets source = 'edusitepro_web_form'
     Output: Success/failure response
-    Logs: Saves to sync_logs table
+    Logs: Supabase Edge Function logs
     ↓
 
-7️⃣  Record created in EduDashPro
+7️⃣  Record created in EduDashPro AUTOMATICALLY ✨
     Table: registration_requests
-    Status: pending
+    Status: pending (always starts as pending)
     Same ID: Uses same UUID from EduSitePro
+    Source: 'edusitepro_web_form' (for tracking)
+    Backup: Manual "Sync" button available if needed
     ↓
 
 8️⃣  Admin views in EduDashPro mobile app
     Screen: Pending Registrations
     Data: Student name, age, class, guardian info
+    Real-time: Appears immediately after submission
     Action: Admin reviews application
     ↓
 
-9️⃣  Admin approves/rejects in app
-    Update: Sets status to 'approved', 'rejected', or 'waitlisted'
+9️⃣  Admin takes action in app (verify payment, approve, reject)
+    Options:
+    - Verify Payment → Syncs back to EduSitePro ✨
+    - Approve → Creates parent account + sends email ✨
+    - Reject → Updates status in both databases ✨
+    - Delete → Removes from both databases ✨
     Fields: reviewed_date, reviewed_by, internal_notes
     ↓
 
