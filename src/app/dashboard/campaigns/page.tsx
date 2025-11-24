@@ -143,6 +143,11 @@ export default function CampaignsPage() {
 
     console.log('[Campaign Update] Starting update for:', editingCampaign.id);
     console.log('[Campaign Update] Form data:', formData);
+    console.log('[Campaign Update] Dates being sent:', {
+      start_date: formData.start_date,
+      end_date: formData.end_date,
+      formatted_end: new Date(formData.end_date).toLocaleDateString()
+    });
 
     try {
       const { error } = await supabase

@@ -9,9 +9,7 @@ const corsHeaders = {
 };
 
 interface CampaignPayload {
-  type: 'INSERT' | 'UPDATE' | 'DELETE';
-  table: string;
-  schema: string;
+  operation: 'INSERT' | 'UPDATE' | 'DELETE';
   record: any;
   old_record: any;
 }
@@ -23,7 +21,10 @@ Deno.serve(async (req) => {
 
   try {
     const payload: CampaignPayload = await req.json();
-    console.log('[sync-campaign-to-edudash] Received payload:', payload.type, payload.record?.id);
+    console.log('[sync-campaign-to-edudash] Received payload:', payload.operation, payload.record?.id);
+
+    // Allow unauthenticated calls from database triggers
+    // (triggers can't easily send auth headers)
 
     // Get EduDashPro credentials from environment
     const edudashUrl = Deno.env.get('EDUDASH_SUPABASE_URL');
@@ -76,7 +77,7 @@ Deno.serve(async (req) => {
       featured: campaign.featured,
     };
 
-    if (payload.type === 'INSERT' || payload.type === 'UPDATE') {
+    if (payload.operation === 'INSERT' || payload.operation === 'UPDATE') {
       // Upsert to EduDashPro
       const { error: upsertError } = await edudashClient
         .from('marketing_campaigns')
@@ -87,8 +88,8 @@ Deno.serve(async (req) => {
         throw upsertError;
       }
 
-      console.log(`[sync-campaign-to-edudash] ✅ ${payload.type} synced:`, campaign.id);
-    } else if (payload.type === 'DELETE') {
+      console.log(`[sync-campaign-to-edudash] ✅ ${payload.operation} synced:`, campaign.id);
+    } else if (payload.operation === 'DELETE') {
       // Delete from EduDashPro
       const { error: deleteError } = await edudashClient
         .from('marketing_campaigns')
@@ -104,7 +105,7 @@ Deno.serve(async (req) => {
     }
 
     return new Response(
-      JSON.stringify({ success: true, operation: payload.type }),
+      JSON.stringify({ success: true, operation: payload.operation }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
