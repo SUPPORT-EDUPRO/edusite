@@ -4,15 +4,10 @@
 -- Function to trigger registration sync to EduDashPro
 CREATE OR REPLACE FUNCTION trigger_sync_registration_to_edudash()
 RETURNS TRIGGER AS $$
-DECLARE
-  function_url text;
 BEGIN
-  -- Get the Edge Function URL
-  function_url := current_setting('app.supabase_url', true) || '/functions/v1/sync-registration-to-edudash';
-  
-  -- Call the Edge Function asynchronously
+  -- Call the Edge Function asynchronously (hardcoded URL for EduSitePro)
   PERFORM net.http_post(
-    url := function_url,
+    url := 'https://bppuzibjlxgfwrujzfsz.supabase.co/functions/v1/sync-registration-to-edudash',
     headers := jsonb_build_object('Content-Type', 'application/json'),
     body := jsonb_build_object('record', to_jsonb(NEW))
   );
