@@ -44,6 +44,7 @@ export default function CampaignsPage() {
     discount_type: 'percentage' as 'percentage' | 'fixed_amount',
     discount_value: 20,
     max_redemptions: '',
+    current_redemptions: 0,
     start_date: '',
     end_date: '',
     active: true,
@@ -125,11 +126,12 @@ export default function CampaignsPage() {
         discount_type: 'percentage',
         discount_value: 20,
         max_redemptions: '',
+        current_redemptions: 0,
         start_date: '',
         end_date: '',
         active: true,
       });
-      setShowCreateModal(false);
+      setEditingCampaign(null);
       loadCampaigns(organizationId);
     } catch (error) {
       console.error('Error creating campaign:', error);
@@ -161,6 +163,7 @@ export default function CampaignsPage() {
           discount_type: formData.discount_type,
           discount_value: formData.discount_value,
           max_redemptions: formData.max_redemptions ? parseInt(formData.max_redemptions) : null,
+          current_redemptions: formData.current_redemptions,
           start_date: formData.start_date,
           end_date: formData.end_date,
           active: formData.active,
@@ -183,6 +186,7 @@ export default function CampaignsPage() {
         discount_type: 'percentage',
         discount_value: 20,
         max_redemptions: '',
+        current_redemptions: 0,
         start_date: '',
         end_date: '',
         active: true,
@@ -239,6 +243,7 @@ export default function CampaignsPage() {
       discount_type: campaign.discount_type,
       discount_value: campaign.discount_value,
       max_redemptions: campaign.max_redemptions?.toString() || '',
+      current_redemptions: campaign.current_redemptions || 0,
       start_date: campaign.start_date?.split('T')[0] || '',
       end_date: campaign.end_date?.split('T')[0] || '',
       active: campaign.active,
@@ -256,6 +261,7 @@ export default function CampaignsPage() {
       discount_type: 'percentage',
       discount_value: 20,
       max_redemptions: '',
+      current_redemptions: 0,
       start_date: '',
       end_date: '',
       active: true,
@@ -611,18 +617,36 @@ export default function CampaignsPage() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-stone-700 mb-1">
-                  Max Uses (optional)
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.max_redemptions}
-                  onChange={(e) => setFormData({ ...formData, max_redemptions: e.target.value })}
-                  className="w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
-                  placeholder="Leave empty for unlimited"
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">
+                    Max Uses (optional)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.max_redemptions}
+                    onChange={(e) => setFormData({ ...formData, max_redemptions: e.target.value })}
+                    className="w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                    placeholder="Leave empty for unlimited"
+                  />
+                </div>
+
+                {editingCampaign && (
+                  <div>
+                    <label className="block text-sm font-medium text-stone-700 mb-1">
+                      Current Redemptions
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={formData.current_redemptions || 0}
+                      onChange={(e) => setFormData({ ...formData, current_redemptions: parseInt(e.target.value) || 0 })}
+                      className="w-full rounded-lg border border-stone-300 px-3 py-2 text-stone-900 focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
+                      placeholder="0"
+                    />
+                  </div>
+                )}
               </div>
 
               <div className="grid gap-4 sm:grid-cols-2">
