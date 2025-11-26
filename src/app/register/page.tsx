@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 
 import { PublicRegistrationForm } from '@/components/registration/PublicRegistrationForm';
+import { PromoBanner } from '@/components/PromoBanner';
 
 function srClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -113,8 +114,18 @@ export default async function RegistrationPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 py-12 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      <PublicRegistrationForm {...formProps} />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+      {/* Promotional Banner */}
+      <PromoBanner 
+        code="WELCOME2026" 
+        discount={50}
+        endDate="2026-04-01"
+      />
+      
+      {/* Registration Form */}
+      <div className="py-12">
+        <PublicRegistrationForm {...formProps} />
+      </div>
     </div>
   );
 }
