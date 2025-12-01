@@ -144,25 +144,33 @@ export async function POST(
 
     console.log('[Org Approval] Centre created:', centreData.id);
 
-    // 4. Create organization in EduDashPro (different schema!)
-    // EduDashPro has a simpler organizations table structure
+    // 4. Create organization in EduDashPro (schemas now synced!)
     const { data: edudashOrgData, error: edudashOrgError } = await supabaseEduDash
       .from('organizations')
       .insert({
         id: orgData.id, // SAME UUID
         name: regRequest.organization_name,
+        slug: regRequest.organization_slug,
         plan_tier: regRequest.plan_tier,
-        email: regRequest.email,
-        phone: regRequest.phone_number,
+        max_centres: orgData.max_centres,
+        primary_contact_name: regRequest.full_name,
+        primary_contact_email: regRequest.email,
+        primary_contact_phone: regRequest.phone_number,
+        billing_email: regRequest.billing_email,
+        email: regRequest.email, // Keep legacy field
+        phone: regRequest.phone_number, // Keep legacy field
         address: `${regRequest.address_line1}, ${regRequest.city}, ${regRequest.province} ${regRequest.postal_code}`,
         address_line1: regRequest.address_line1,
         address_line2: regRequest.address_line2,
         city: regRequest.city,
-        state: regRequest.province, // province -> state
+        province: regRequest.province,
+        state: regRequest.province, // Populate both province and state
         postal_code: regRequest.postal_code,
         country: regRequest.country,
         subscription_status: 'trialing',
         trial_ends_at: orgData.trial_end_date,
+        subscription_start_date: orgData.subscription_start_date,
+        subscription_end_date: orgData.subscription_end_date,
         status: 'active',
         is_active: true,
       })
