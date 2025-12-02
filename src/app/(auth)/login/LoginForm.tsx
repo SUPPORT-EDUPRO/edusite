@@ -52,9 +52,17 @@ export function LoginForm({ signIn, redirectTo }: LoginFormProps) {
       </div>
 
       <div>
-        <label htmlFor="password" className="mb-2 block text-sm font-medium text-stone-700">
-          Password
-        </label>
+        <div className="mb-2 flex items-center justify-between">
+          <label htmlFor="password" className="block text-sm font-medium text-stone-700">
+            Password
+          </label>
+          <a 
+            href="/forgot-password" 
+            className="text-sm text-amber-600 hover:text-amber-700 hover:underline"
+          >
+            Forgot password?
+          </a>
+        </div>
         <input
           id="password"
           name="password"
