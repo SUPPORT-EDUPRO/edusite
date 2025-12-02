@@ -146,11 +146,6 @@ export default function OrganizationRequestsPage() {
   }
 
   async function handleResendInvite(request: RegistrationRequest) {
-    if (!request.edusitepro_org_id || request.status !== 'approved') {
-      alert('Can only resend invitations for approved requests');
-      return;
-    }
-
     if (!confirm(`Resend invitation email to ${request.email}?`)) {
       return;
     }
@@ -161,7 +156,7 @@ export default function OrganizationRequestsPage() {
       // Get the created user ID from the registration request
       const userId = request.created_user_id;
       if (!userId) {
-        throw new Error('User ID not found for this request');
+        throw new Error('User ID not found for this request. Organization may not have been fully approved.');
       }
 
       const response = await fetch(`/api/organizations/resend-invite/${userId}`, {
