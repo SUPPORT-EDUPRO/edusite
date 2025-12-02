@@ -186,19 +186,12 @@ export default function ResetPasswordPage() {
               </div>
               
               {resendSuccess && (
-                <div style={{ padding: 12, background: "rgba(34, 197, 94, 0.2)", border: "1px solid rgba(34, 197, 94, 0.4)", borderRadius: 8, marginBottom: 16 }}>
+                <div style={{ padding: 12, background: "rgba(34, 197, 94, 0.2)", border: "1px solid rgba(34, 197, 94, 0.4)", borderRadius: 8, marginTop: 16 }}>
                   <p style={{ color: "#86efac", fontSize: 14, margin: 0 }}>
                     ✉️ Check your email! We've sent a new password reset link to <strong>{userEmail}</strong>
                   </p>
                 </div>
               )}
-              
-              <p style={{ color: "#d1d5db", fontSize: 14, textAlign: "center", marginBottom: 16 }}>
-                Need help?{" "}
-                <a href="https://wa.me/27674770975" style={{ color: "#fbbf24", textDecoration: "none" }}>
-                  WhatsApp Support
-                </a>
-              </p>
             </div>
           ) : success ? (
             <div style={{ textAlign: "center" }}>
@@ -273,7 +266,45 @@ export default function ResetPasswordPage() {
             </form>
           )}
 
-          <div style={{ marginTop: 24, textAlign: "center" }}>
+          {!success && (
+            <div style={{ marginTop: 24, textAlign: "center" }}>
+              <button
+                onClick={requestNewLink}
+                disabled={resendLoading || !userEmail}
+                style={{
+                  width: "100%",
+                  padding: "12px 16px",
+                  background: "rgba(59, 130, 246, 0.1)",
+                  color: resendLoading ? "#6B7280" : "#60A5FA",
+                  border: "1px solid rgba(59, 130, 246, 0.3)",
+                  borderRadius: 8,
+                  fontSize: 14,
+                  fontWeight: 600,
+                  cursor: resendLoading || !userEmail ? "not-allowed" : "pointer",
+                  marginBottom: 16,
+                }}
+              >
+                {resendLoading ? "Sending..." : "Request New Reset Link"}
+              </button>
+            </div>
+          )}
+
+          <div style={{ marginTop: 8, textAlign: "center" }}>
+            <a
+              href="/login"
+              style={{
+                display: "inline-block",
+                color: "#60A5FA",
+                fontSize: 14,
+                textDecoration: "none",
+                marginBottom: 12,
+              }}
+            >
+              ← Back to Sign In
+            </a>
+          </div>
+
+          <div style={{ marginTop: 16, textAlign: "center" }}>
             <p style={{ color: "#9CA3AF", fontSize: 12 }}>
               Need help?{" "}
               <a href="https://wa.me/27674770975" style={{ color: "#fbbf24", textDecoration: "none" }}>
