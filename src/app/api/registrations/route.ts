@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-import { supabase } from '@/lib/supabase';
+import { supabase, getServiceRoleClient } from '@/lib/supabase';
 import { generateRegistrationConfirmation } from '@/lib/email-templates/registration-confirmation';
 
 /**
@@ -14,6 +14,54 @@ import { generateRegistrationConfirmation } from '@/lib/email-templates/registra
  * - Server-side validation before database insert
  * - No sensitive data exposure (service role key not needed)
  */
+
+/**
+ * GET /api/registrations
+ * Fetch registration requests with optional status filter (Admin only)
+ */
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get('status');
+
+    const supabaseClient = getServiceRoleClient();
+    
+    let query = supabaseClient
+      .from('registration_requests')
+      .select(`
+        *,
+        organizations (
+          name
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (status && status !== 'all') {
+      query = query.eq('status', status);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('[Registrations API] Error:', error);
+      return NextResponse.json(
+        { error: error.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json(
+      { success: true, data: data || [] },
+      { status: 200 }
+    );
+  } catch (error: any) {
+    console.error('[Registrations API] Unexpected error:', error);
+    return NextResponse.json(
+      { error: error.message || 'An unexpected error occurred' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {

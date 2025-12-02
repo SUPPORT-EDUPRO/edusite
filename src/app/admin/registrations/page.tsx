@@ -5,7 +5,6 @@ import { Check, X, Eye, Search, Filter, Clock, CheckCircle, XCircle } from 'luci
 import Link from 'next/link';
 
 import AdminLayout from '@/components/admin/AdminLayout';
-import { getServiceRoleClient } from '@/lib/supabase';
 
 interface Registration {
   id: string;
@@ -48,27 +47,15 @@ export default function RegistrationsPage() {
   const fetchRegistrations = async () => {
     setLoading(true);
     try {
-      const supabase = getServiceRoleClient();
-      
-      let query = supabase
-        .from('registration_requests')
-        .select(`
-          *,
-          organizations (
-            name
-          )
-        `)
-        .order('created_at', { ascending: false });
+      const response = await fetch(`/api/registrations?status=${filter}`);
+      const result = await response.json();
 
-      if (filter !== 'all') {
-        query = query.eq('status', filter);
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to fetch registrations');
       }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-      setRegistrations(data || []);
-    } catch (error) {
+      setRegistrations(result.data || []);
+    } catch (error: any) {
       console.error('Error fetching registrations:', error);
       alert('Failed to load registrations');
     } finally {
@@ -118,12 +105,23 @@ export default function RegistrationsPage() {
         .from('registration_requests')
         .update({
           status: 'rejected',
-          rejection_reason: reason,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', registrationId);
+  const handleReject = async (registrationId: string) => {
+    const reason = prompt('Please provide a reason for rejection (will be sent to the parent):');
+    if (!reason) return;
 
-      if (error) throw error;
+    setProcessing(registrationId);
+    try {
+      const response = await fetch('/api/registrations/reject', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ registrationId, reason }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to reject registration');
+      }
 
       alert('✅ Registration rejected');
       fetchRegistrations();
@@ -134,19 +132,7 @@ export default function RegistrationsPage() {
     } finally {
       setProcessing(null);
     }
-  };
-
-  const filteredRegistrations = registrations.filter((reg) => {
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      reg.student_first_name.toLowerCase().includes(searchLower) ||
-      reg.student_last_name.toLowerCase().includes(searchLower) ||
-      reg.guardian_name.toLowerCase().includes(searchLower) ||
-      reg.guardian_email.toLowerCase().includes(searchLower)
-    );
-  });
-
-  const stats = {
+  };nst stats = {
     pending: registrations.filter(r => r.status === 'pending').length,
     approved: registrations.filter(r => r.status === 'approved').length,
     rejected: registrations.filter(r => r.status === 'rejected').length,
