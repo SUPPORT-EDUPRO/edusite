@@ -85,7 +85,21 @@ export default function OrganizationRequestsPage() {
       }
 
       const result = await response.json();
-      alert(`Organization approved successfully!\n\nEduSitePro Org ID: ${result.edusiteproOrgId}\nEduDashPro Org ID: ${result.edudashproOrgId}`);
+      
+      if (result.success && result.data) {
+        alert(
+          `✅ Organization approved successfully!\n\n` +
+          `Organization: ${result.data.organizationName}\n` +
+          `Email: ${result.data.email}\n\n` +
+          `Created Resources:\n` +
+          `• Organization ID: ${result.data.organizationId}\n` +
+          `• Centre ID: ${result.data.centreId}\n` +
+          `• User ID: ${result.data.userId}\n\n` +
+          `The organization has been synced to both EduSitePro and EduDashPro.`
+        );
+      } else {
+        alert('Organization approved successfully!');
+      }
       
       // Refresh the list
       await fetchRequests();
