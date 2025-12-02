@@ -3,7 +3,7 @@
  * Server-side utilities for role-based access control
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 /**
@@ -11,46 +11,50 @@ import { cookies } from 'next/headers';
  * Returns user profile if authorized, null otherwise
  */
 export async function verifySuperAdmin() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  // Get session from cookies - check all possible cookie names
   const cookieStore = await cookies();
-  const allCookies = cookieStore.getAll();
   
-  // Find the access token cookie (Supabase SSR uses different naming)
-  const authCookie = allCookies.find(cookie => 
-    cookie.name.includes('auth-token') || 
-    cookie.name.includes('access-token') ||
-    cookie.name.includes('sb-') && cookie.name.includes('auth-token')
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          // No-op in API routes
+        },
+        remove(name: string, options: CookieOptions) {
+          // No-op in API routes
+        },
+      },
+    }
   );
+
+  // Get session using SSR client
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
-  if (!authCookie) {
-    console.log('[verifySuperAdmin] No auth cookie found. Available cookies:', allCookies.map(c => c.name));
+  if (sessionError || !session) {
+    console.log('[verifySuperAdmin] No session found');
     return null;
   }
 
-  console.log('[verifySuperAdmin] Using cookie:', authCookie.name);
-
-  // Verify the session
-  const { data: { user }, error } = await supabase.auth.getUser(authCookie.value);
-  
-  if (error || !user) {
-    console.log('[verifySuperAdmin] User verification failed:', error);
-    return null;
-  }
+  console.log('[verifySuperAdmin] Session found for user:', session.user.email);
 
   // Check user role
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('id, email, role, organization_id')
-    .eq('id', user.id)
+    .eq('id', session.user.id)
     .single();
 
-  if (!profile || profile.role !== 'superadmin') {
-    console.log('[verifySuperAdmin] Not a superadmin. Role:', profile?.role);
+  if (profileError || !profile) {
+    console.log('[verifySuperAdmin] Profile fetch failed:', profileError);
+    return null;
+  }
+
+  if (profile.role !== 'superadmin') {
+    console.log('[verifySuperAdmin] Not a superadmin. Role:', profile.role);
     return null;
   }
 
@@ -68,46 +72,50 @@ export async function verifySuperAdmin() {
  * Returns user profile if authorized, null otherwise
  */
 export async function verifyAdmin() {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-
-  // Get session from cookies - check all possible cookie names
   const cookieStore = await cookies();
-  const allCookies = cookieStore.getAll();
   
-  // Find the access token cookie (Supabase SSR uses different naming)
-  const authCookie = allCookies.find(cookie => 
-    cookie.name.includes('auth-token') || 
-    cookie.name.includes('access-token') ||
-    cookie.name.includes('sb-') && cookie.name.includes('auth-token')
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          // No-op in API routes
+        },
+        remove(name: string, options: CookieOptions) {
+          // No-op in API routes
+        },
+      },
+    }
   );
+
+  // Get session using SSR client
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   
-  if (!authCookie) {
-    console.log('[verifyAdmin] No auth cookie found. Available cookies:', allCookies.map(c => c.name));
+  if (sessionError || !session) {
+    console.log('[verifyAdmin] No session found');
     return null;
   }
 
-  console.log('[verifyAdmin] Using cookie:', authCookie.name);
-
-  // Verify the session
-  const { data: { user }, error } = await supabase.auth.getUser(authCookie.value);
-  
-  if (error || !user) {
-    console.log('[verifyAdmin] User verification failed:', error);
-    return null;
-  }
+  console.log('[verifyAdmin] Session found for user:', session.user.email);
 
   // Check user role - allow both superadmin and admin
-  const { data: profile } = await supabase
+  const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('id, email, role, organization_id')
-    .eq('id', user.id)
+    .eq('id', session.user.id)
     .single();
 
-  if (!profile || (profile.role !== 'superadmin' && profile.role !== 'admin')) {
-    console.log('[verifyAdmin] User is not admin. Role:', profile?.role);
+  if (profileError || !profile) {
+    console.log('[verifyAdmin] Profile fetch failed:', profileError);
+    return null;
+  }
+
+  if (profile.role !== 'superadmin' && profile.role !== 'admin') {
+    console.log('[verifyAdmin] User is not admin. Role:', profile.role);
     return null;
   }
 
