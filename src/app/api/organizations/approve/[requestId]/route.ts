@@ -83,26 +83,27 @@ export async function POST(
       );
     }
 
-    // 1. Create user in EduSitePro auth
-    const { data: authData, error: authError } = await supabaseEduSite.auth.admin.createUser({
-      email: regRequest.email,
-      password: Math.random().toString(36).slice(-12), // Temp password (user will reset)
-      email_confirm: true, // Auto-confirm
-      user_metadata: {
-        full_name: regRequest.full_name,
-        role: 'organization_admin',
-      },
-    });
+    // 1. Create user in EduSitePro auth and send invitation email
+    const { data: authData, error: authError } = await supabaseEduSite.auth.admin.inviteUserByEmail(
+      regRequest.email,
+      {
+        data: {
+          full_name: regRequest.full_name,
+          role: 'organization_admin',
+        },
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      }
+    );
 
     if (authError || !authData.user) {
       console.error('[Org Approval] Auth error:', authError);
       return NextResponse.json(
-        { error: `Failed to create user: ${authError?.message}` },
+        { error: `Failed to invite user: ${authError?.message}` },
         { status: 500, headers: corsHeaders }
       );
     }
 
-    console.log('[Org Approval] User created:', authData.user.id);
+    console.log('[Org Approval] User invited:', authData.user.id);
 
     // 2. Create organization in EduSitePro
     const { data: orgData, error: orgError } = await supabaseEduSite
@@ -229,21 +230,22 @@ export async function POST(
       console.log('[Org Approval] Preschool created:', preschoolData.id);
     }
 
-    // 6. Create user in EduDashPro auth
-    const { data: edudashAuthData, error: edudashAuthError } = await supabaseEduDash.auth.admin.createUser({
-      email: regRequest.email,
-      password: Math.random().toString(36).slice(-12),
-      email_confirm: true,
-      user_metadata: {
-        full_name: regRequest.full_name,
-        role: 'principal',
-      },
-    });
+    // 6. Create user in EduDashPro auth and send invitation
+    const { data: edudashAuthData, error: edudashAuthError } = await supabaseEduDash.auth.admin.inviteUserByEmail(
+      regRequest.email,
+      {
+        data: {
+          full_name: regRequest.full_name,
+          role: 'principal',
+        },
+        redirectTo: `${process.env.EDUDASH_SITE_URL}/auth/callback`,
+      }
+    );
 
     if (edudashAuthError) {
       console.error('[Org Approval] EduDash auth error:', edudashAuthError);
     } else {
-      console.log('[Org Approval] EduDash user created:', edudashAuthData.user.id);
+      console.log('[Org Approval] EduDash user invited:', edudashAuthData.user.id);
       
       // Update profile in EduDashPro
       await supabaseEduDash
@@ -269,13 +271,10 @@ export async function POST(
       })
       .eq('id', requestId);
 
-    // 8. Send welcome email with password reset link
-    // TODO: Implement email sending
-
     return NextResponse.json(
       {
         success: true,
-        message: 'Organization approved and synced successfully',
+        message: 'Organization approved and synced successfully. Invitation emails sent to both platforms.',
         data: {
           organizationId: orgData.id,
           centreId: centreData.id,
