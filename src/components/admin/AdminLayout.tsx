@@ -29,6 +29,12 @@ const navigation: NavItem[] = [
     description: 'Student applications',
   },
   {
+    href: '/admin/organization-requests',
+    label: 'Organization Requests',
+    icon: '🏫',
+    description: 'School registration requests',
+  },
+  {
     href: '/admin/campaigns',
     label: 'Campaigns',
     icon: '🎟️',

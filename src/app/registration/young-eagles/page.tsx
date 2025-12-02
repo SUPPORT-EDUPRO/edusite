@@ -34,7 +34,7 @@ export default function YoungEaglesRegistration() {
                 'Welcome to Young Eagles Preschool! We are now accepting registrations for the 2026 academic year. Join our nurturing environment where young minds take flight!',
               min_age: 0.5,
               max_age: 6,
-              terms_and_conditions_url: 'https://youngeagles.org.za/terms-and-conditions',
+              terms_and_conditions_url: 'https://edusitepro.edudashpro.org.za/terms-young-eagles.html',
             }}
           />
         </div>
