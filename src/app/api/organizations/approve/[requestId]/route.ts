@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { verifySuperAdmin, forbiddenResponse } from '@/lib/auth-helpers';
 
 // CORS headers for cross-origin requests
 const corsHeaders = {
@@ -25,6 +26,15 @@ export async function POST(
   { params }: { params: { requestId: string } }
 ) {
   try {
+    // Verify SuperAdmin access
+    const admin = await verifySuperAdmin();
+    if (!admin) {
+      console.log('[Org Approval] Unauthorized access attempt');
+      return forbiddenResponse('SuperAdmin access required');
+    }
+
+    console.log('[Org Approval] SuperAdmin access granted:', admin.email);
+
     const { requestId } = params;
 
     // Create Supabase clients
@@ -289,12 +299,22 @@ export async function POST(
  * POST /api/organizations/reject/[requestId]
  * 
  * Reject organization registration request
+ * Only SuperAdmins can call this endpoint
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: { requestId: string } }
 ) {
   try {
+    // Verify SuperAdmin access
+    const admin = await verifySuperAdmin();
+    if (!admin) {
+      console.log('[Org Rejection] Unauthorized access attempt');
+      return forbiddenResponse('SuperAdmin access required');
+    }
+
+    console.log('[Org Rejection] SuperAdmin access granted:', admin.email);
+
     const { requestId } = params;
     const body = await request.json();
     const { reason } = body;

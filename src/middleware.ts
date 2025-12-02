@@ -168,21 +168,39 @@ export async function middleware(request: NextRequest) {
       .eq('id', session.user.id)
       .single();
 
+    if (!profile) {
+      console.log('[Middleware] No profile found for user:', session.user.id);
+      return NextResponse.redirect(new URL('/login', request.url));
+    }
+
     // Platform admin (superadmin) should use /admin
     // Tenant admin (principal_admin) should use /dashboard
-    if (profile) {
-      const isPlatformAdmin = profile.role === 'superadmin' && !tenantId;
-      const isTenantAdmin = (profile.role === 'principal_admin' || profile.role === 'principal') && tenantId;
+    const isPlatformAdmin = profile.role === 'superadmin';
+    const isTenantAdmin = ['principal_admin', 'principal', 'admin'].includes(profile.role) && profile.organization_id;
 
-      // Redirect tenant admins from /admin to /dashboard
-      if (path.startsWith('/admin') && isTenantAdmin) {
-        return NextResponse.redirect(new URL('/dashboard', request.url));
+    // Block non-superadmins from accessing /admin routes
+    if (path.startsWith('/admin')) {
+      if (!isPlatformAdmin) {
+        console.log('[Middleware] Access denied to /admin - User role:', profile.role);
+        // If they're a tenant admin, redirect to their dashboard
+        if (isTenantAdmin) {
+          return NextResponse.redirect(new URL('/dashboard', request.url));
+        }
+        // Otherwise, show unauthorized error
+        return NextResponse.redirect(new URL('/login?error=unauthorized', request.url));
       }
+      console.log('[Middleware] SuperAdmin access granted to /admin');
+    }
 
-      // Redirect platform admins from /dashboard to /admin
-      if (path.startsWith('/dashboard') && isPlatformAdmin) {
-        return NextResponse.redirect(new URL('/admin', request.url));
-      }
+    // Redirect platform admins from /dashboard to /admin
+    if (path.startsWith('/dashboard') && isPlatformAdmin) {
+      return NextResponse.redirect(new URL('/admin', request.url));
+    }
+
+    // Block users without proper role from accessing /dashboard
+    if (path.startsWith('/dashboard') && !isTenantAdmin && !isPlatformAdmin) {
+      console.log('[Middleware] Access denied to /dashboard - User role:', profile.role);
+      return NextResponse.redirect(new URL('/login?error=unauthorized', request.url));
     }
   }
 
