@@ -82,13 +82,40 @@ function AuthCallbackContent() {
           margin: "0 auto 16px"
         }} />
         <p style={{ color: "#fff", fontSize: 16 }}>Verifying your email...</p>
-        <style jsx>{`
-          @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-          }
-        `}</style>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div style={{ 
+      minHeight: "100vh", 
+      display: "flex", 
+      alignItems: "center", 
+      justifyContent: "center",
+      background: "linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%)",
+      fontFamily: "system-ui, sans-serif"
+    }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ 
+          width: 48, 
+          height: 48, 
+          border: "4px solid rgba(255,255,255,0.1)",
+          borderTop: "4px solid #fbbf24",
+          borderRadius: "50%",
+          margin: "0 auto 16px"
+        }} />
+        <p style={{ color: "#fff", fontSize: 16 }}>Loading...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function AuthCallbackPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <AuthCallbackContent />
+    </Suspense>
   );
 }
