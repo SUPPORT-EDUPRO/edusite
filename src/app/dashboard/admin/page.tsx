@@ -1,10 +1,10 @@
-import Link from 'next/link';
 import { headers } from 'next/headers';
+import Link from 'next/link';
 
 import AdminLayout from '@/components/admin/AdminLayout';
+import { createClient } from '@/lib/auth';
 import { BLOCKS } from '@/lib/blocks';
 import { getServiceRoleClient } from '@/lib/supabase';
-import { createClient } from '@/lib/auth';
 
 export const metadata = { title: 'Admin | EduSitePro' };
 

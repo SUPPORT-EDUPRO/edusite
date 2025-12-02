@@ -1,22 +1,19 @@
 'use client';
 
-import { useState, useEffect } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { 
-  Plus, 
-  Edit, 
-  Trash2, 
-  TrendingUp, 
-  Users, 
-  DollarSign,
-  Calendar,
-  Gift,
   BarChart3,
+  Check,
+  Copy,
+  Edit, 
   Eye,
   EyeOff,
-  Copy,
-  Check
-} from 'lucide-react';
+  Gift,
+  Plus, 
+  Trash2, 
+  TrendingUp, 
+  Users} from 'lucide-react';
+import { useEffect,useState } from 'react';
 
 interface Campaign {
   id: string;

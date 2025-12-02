@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { verifySuperAdmin, forbiddenResponse } from '@/lib/auth-helpers';
+import { NextRequest, NextResponse } from 'next/server';
+
+import { forbiddenResponse,verifySuperAdmin } from '@/lib/auth-helpers';
 import { sendOrganizationWelcomeEmail } from '@/lib/email/service';
 
 // CORS headers for cross-origin requests

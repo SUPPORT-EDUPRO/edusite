@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { generateRegistrationConfirmation } from '@/lib/email-templates/registration-confirmation';
 
 /**

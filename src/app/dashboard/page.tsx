@@ -1,8 +1,8 @@
-import Link from 'next/link';
 import { headers } from 'next/headers';
+import Link from 'next/link';
 
-import { getServiceRoleClient } from '@/lib/supabase';
 import { createClient } from '@/lib/auth';
+import { getServiceRoleClient } from '@/lib/supabase';
 
 export const metadata = { title: 'Dashboard | Young Eagles' };
 

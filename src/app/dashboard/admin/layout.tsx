@@ -1,5 +1,6 @@
-import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
+import { redirect } from 'next/navigation';
+
 import { createClient } from '@/lib/auth';
 
 export default async function AdminLayout({

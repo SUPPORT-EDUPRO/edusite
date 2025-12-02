@@ -1,7 +1,8 @@
-import { redirect } from 'next/navigation';
 import { headers } from 'next/headers';
-import { createClient } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+
 import TenantDashboardLayout from '@/components/dashboard/TenantDashboardLayout';
+import { createClient } from '@/lib/auth';
 
 export default async function DashboardLayout({
   children,

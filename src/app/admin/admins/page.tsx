@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { UserPlus, Edit, Trash2, Shield, Users, CheckCircle, XCircle } from 'lucide-react';
+import { Edit, Shield, Trash2, UserPlus, Users } from 'lucide-react';
+import { useEffect,useState } from 'react';
+
 import AdminLayout from '@/components/admin/AdminLayout';
 
 interface AdminUser {

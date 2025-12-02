@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Ticket, Plus, Trash2, Edit2, Save, X, TrendingUp, Users, AlertCircle } from 'lucide-react';
+import {Edit2, Plus, Save, Ticket, Trash2, X } from 'lucide-react';
+import { useEffect,useState } from 'react';
 
 import AdminLayout from '@/components/admin/AdminLayout';
 import { getServiceRoleClient } from '@/lib/supabase';
