@@ -151,15 +151,8 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <>
-      <style jsx global>{`
-        body {
-          overflow-x: hidden;
-          max-width: 100vw;
-        }
-      `}</style>
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%)", fontFamily: "system-ui, sans-serif", overflowX: "hidden" }}>
-        <div style={{ width: "100%", maxWidth: "500px", background: "rgba(255,255,255,0.05)", backdropFilter: "blur(10px)", padding: "40px 5%", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.3)", boxSizing: "border-box", margin: "20px" }}>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%)", fontFamily: "system-ui, sans-serif", overflowX: "hidden" }}>
+      <div style={{ width: "100%", maxWidth: "500px", background: "rgba(255,255,255,0.05)", backdropFilter: "blur(10px)", padding: "40px 5%", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.3)", boxSizing: "border-box", margin: "20px" }}>
           {/* Header with EduSitePro branding */}
           <div style={{ textAlign: "center", marginBottom: 32 }}>
             <div style={{ width: 64, height: 64, background: "linear-gradient(135deg, #f59e0b 0%, #f97316 100%)", borderRadius: 32, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 32 }}>
@@ -363,6 +356,5 @@ export default function ResetPasswordPage() {
           </div>
         </div>
       </div>
-    </>
   );
 }
