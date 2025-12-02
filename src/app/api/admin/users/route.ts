@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getServiceRoleClient } from '@/lib/supabase';
 import { verifySuperAdmin, forbiddenResponse } from '@/lib/auth-helpers';
 
 // GET - Fetch all admin users
@@ -10,10 +10,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = getServiceRoleClient();
 
     // Fetch all admin/superadmin users with their permissions
     const { data: profiles, error: profilesError } = await supabase
@@ -70,10 +67,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = getServiceRoleClient();
 
     // Create user in auth.users
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
