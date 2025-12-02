@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifySuperAdmin, forbiddenResponse } from '@/lib/auth-helpers';
+import { sendOrganizationWelcomeEmail } from '@/lib/email/service';
 
 // CORS headers
 const corsHeaders = {
@@ -66,43 +67,81 @@ export async function POST(
     }
 
     const userEmail = userData.user.email;
+    const fullName = userData.user.user_metadata?.full_name || 'there';
+    console.log('[Resend Invite] Processing for user:', userEmail);
 
-    // Send invitation to EduSitePro
-    const { error: inviteErrorEduSite } = await supabaseEduSite.auth.admin.inviteUserByEmail(
-      userEmail!,
-      {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
-      }
-    );
-
-    if (inviteErrorEduSite) {
-      console.error('[Resend Invite] EduSitePro error:', inviteErrorEduSite);
-    }
-
-    // Check if user exists in EduDashPro and send invitation there too
-    const { data: edudashUser } = await supabaseEduDash
-      .from('auth.users')
-      .select('id, email')
-      .eq('email', userEmail)
+    // Get organization info from registration request
+    const { data: orgRequest } = await supabaseEduSite
+      .from('organization_registration_requests')
+      .select('organization_name, full_name')
+      .eq('created_user_id', userId)
       .single();
 
-    if (edudashUser) {
-      const { error: inviteErrorEduDash } = await supabaseEduDash.auth.admin.inviteUserByEmail(
-        userEmail!,
-        {
-          redirectTo: `${process.env.EDUDASH_SITE_URL}/auth/callback`,
-        }
-      );
+    const organizationName = orgRequest?.organization_name || 'Your Organization';
+    const recipientName = orgRequest?.full_name || fullName;
 
-      if (inviteErrorEduDash) {
-        console.error('[Resend Invite] EduDashPro error:', inviteErrorEduDash);
+    // For already confirmed users, we need to use generateLink instead of inviteUserByEmail
+    // Generate magic link for EduSitePro
+    const { data: magicLinkEduSite, error: linkErrorEduSite } = await supabaseEduSite.auth.admin.generateLink({
+      type: 'magiclink',
+      email: userEmail!,
+      options: {
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
       }
+    });
+
+    if (linkErrorEduSite) {
+      console.error('[Resend Invite] EduSitePro magic link error:', linkErrorEduSite);
+      throw new Error(`Failed to generate EduSitePro link: ${linkErrorEduSite.message}`);
+    }
+
+    console.log('[Resend Invite] EduSitePro magic link generated');
+
+    // Check if user exists in EduDashPro
+    const { data: edudashUserData } = await supabaseEduDash.auth.admin.listUsers();
+    const edudashUser = edudashUserData.users.find(u => u.email === userEmail);
+
+    let magicLinkEduDash = null;
+    if (edudashUser) {
+      const { data: link, error: linkErrorEduDash } = await supabaseEduDash.auth.admin.generateLink({
+        type: 'magiclink',
+        email: userEmail!,
+        options: {
+          redirectTo: `${process.env.EDUDASH_SITE_URL}/dashboard`,
+        }
+      });
+
+      if (linkErrorEduDash) {
+        console.error('[Resend Invite] EduDashPro magic link error:', linkErrorEduDash);
+      } else {
+        magicLinkEduDash = link;
+        console.log('[Resend Invite] EduDashPro magic link generated');
+      }
+    }
+
+    // Send branded welcome email with magic links
+    try {
+      await sendOrganizationWelcomeEmail({
+        to: userEmail!,
+        organizationName,
+        recipientName,
+        eduSiteProLink: magicLinkEduSite.properties.action_link,
+        eduDashProLink: magicLinkEduDash?.properties?.action_link,
+      });
+      console.log('[Resend Invite] Welcome email sent to:', userEmail);
+    } catch (emailError) {
+      console.error('[Resend Invite] Email sending failed:', emailError);
+      // Continue anyway - links are generated
     }
 
     return NextResponse.json(
       {
         success: true,
-        message: `Invitation emails sent to ${userEmail}`,
+        message: `Welcome email sent to ${userEmail}`,
+        data: {
+          eduSiteProLink: magicLinkEduSite.properties.action_link,
+          eduDashProLink: magicLinkEduDash?.properties?.action_link,
+        }
       },
       { status: 200, headers: corsHeaders }
     );

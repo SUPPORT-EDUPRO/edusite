@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifySuperAdmin, forbiddenResponse } from '@/lib/auth-helpers';
+import { sendOrganizationWelcomeEmail } from '@/lib/email/service';
 
 // CORS headers for cross-origin requests
 const corsHeaders = {
@@ -271,10 +272,47 @@ export async function POST(
       })
       .eq('id', requestId);
 
+    // 8. Send branded welcome email with setup links
+    try {
+      // Generate magic links for password setup
+      const { data: magicLinkEduSite } = await supabaseEduSite.auth.admin.generateLink({
+        type: 'invite',
+        email: regRequest.email,
+        options: {
+          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
+        }
+      });
+
+      let magicLinkEduDash = null;
+      if (edudashAuthData) {
+        const { data: link } = await supabaseEduDash.auth.admin.generateLink({
+          type: 'invite',
+          email: regRequest.email,
+          options: {
+            redirectTo: `${process.env.EDUDASH_SITE_URL}/dashboard`,
+          }
+        });
+        magicLinkEduDash = link;
+      }
+
+      await sendOrganizationWelcomeEmail({
+        to: regRequest.email,
+        organizationName: regRequest.organization_name,
+        recipientName: regRequest.full_name,
+        eduSiteProLink: magicLinkEduSite?.properties?.action_link || `${process.env.NEXT_PUBLIC_SITE_URL}/login`,
+        eduDashProLink: magicLinkEduDash?.properties?.action_link,
+      });
+      
+      console.log('[Org Approval] Welcome email sent to:', regRequest.email);
+    } catch (emailError) {
+      console.error('[Org Approval] Email sending failed (non-critical):', emailError);
+      // Don't fail the approval if email fails
+    }
+
     return NextResponse.json(
       {
         success: true,
-        message: 'Organization approved and synced successfully. Invitation emails sent to both platforms.',
+        message: 'Organization approved and synced successfully. Welcome email sent!',
         data: {
           organizationId: orgData.id,
           centreId: centreData.id,
