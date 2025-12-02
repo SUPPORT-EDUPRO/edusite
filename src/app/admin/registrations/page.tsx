@@ -99,18 +99,6 @@ export default function RegistrationsPage() {
 
     setProcessing(registrationId);
     try {
-      const supabase = getServiceRoleClient();
-      
-      const { error } = await supabase
-        .from('registration_requests')
-        .update({
-          status: 'rejected',
-  const handleReject = async (registrationId: string) => {
-    const reason = prompt('Please provide a reason for rejection (will be sent to the parent):');
-    if (!reason) return;
-
-    setProcessing(registrationId);
-    try {
       const response = await fetch('/api/registrations/reject', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -132,7 +120,9 @@ export default function RegistrationsPage() {
     } finally {
       setProcessing(null);
     }
-  };nst stats = {
+  };
+
+  const stats = {
     pending: registrations.filter(r => r.status === 'pending').length,
     approved: registrations.filter(r => r.status === 'approved').length,
     rejected: registrations.filter(r => r.status === 'rejected').length,
