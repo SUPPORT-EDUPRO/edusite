@@ -8,6 +8,10 @@ export const metadata = {
   title: 'Centres | EduSitePro Admin',
 };
 
+// Disable caching for this page
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 interface Centre {
   id: string;
   slug: string;

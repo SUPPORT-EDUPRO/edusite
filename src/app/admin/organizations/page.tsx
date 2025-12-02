@@ -7,6 +7,10 @@ export const metadata = {
   title: 'Organizations | EduSitePro Admin',
 };
 
+// Disable caching for this page
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function AdminOrganizationsPage() {
   const supabase = getServiceRoleClient();
 
