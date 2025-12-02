@@ -15,28 +15,40 @@ function AuthCallbackContent() {
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
       );
 
-      // Get the code from URL (for email verification)
+      // Get parameters from URL
       const code = searchParams.get('code');
       const type = searchParams.get('type');
+      const next = searchParams.get('next');
       const redirectTo = searchParams.get('redirect_to') || searchParams.get('redirectTo');
+      const error = searchParams.get('error');
+      const errorDescription = searchParams.get('error_description');
 
-      console.log('[Auth Callback] Type:', type, 'Code:', code ? 'present' : 'missing');
+      console.log('[Auth Callback] Type:', type, 'Code:', code ? 'present' : 'missing', 'Next:', next);
+
+      // Handle OAuth errors
+      if (error) {
+        console.error('[Auth Callback] OAuth Error:', error, errorDescription);
+        router.push(`/login?error=${encodeURIComponent(errorDescription || error)}`);
+        return;
+      }
 
       if (code) {
-        // Exchange the code for a session
-        const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+        // Exchange the code for a session (works for both email verification and OAuth)
+        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
         
-        if (error) {
-          console.error('[Auth Callback] Error:', error);
-          router.push(`/login?error=${encodeURIComponent(error.message)}`);
+        if (exchangeError) {
+          console.error('[Auth Callback] Exchange Error:', exchangeError);
+          router.push(`/login?error=${encodeURIComponent(exchangeError.message)}`);
           return;
         }
 
         console.log('[Auth Callback] Session exchanged successfully');
 
-        // Redirect based on type
+        // Redirect based on type or next parameter
         if (type === 'recovery' || redirectTo?.includes('reset-password')) {
           router.push('/reset-password');
+        } else if (next) {
+          router.push(next);
         } else if (redirectTo) {
           router.push(redirectTo);
         } else {
@@ -50,7 +62,7 @@ function AuthCallbackContent() {
           if (profile?.role === 'superadmin') {
             router.push('/admin');
           } else {
-            router.push('/dashboard');
+            router.push('/admin'); // Default for edusitepro admins
           }
         }
       } else {
