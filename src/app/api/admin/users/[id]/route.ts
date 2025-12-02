@@ -302,3 +302,77 @@ export async function GET(
     );
   }
 }
+
+/**
+ * PATCH /api/admin/users/[id]
+ * 
+ * Update admin permissions (SuperAdmin only)
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const userId = params.id;
+    const body = await request.json();
+    const { permissions } = body;
+
+    if (!userId || !permissions) {
+      return NextResponse.json(
+        { error: 'User ID and permissions are required' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = getServiceRoleClient();
+
+    // Verify target user is admin (not superadmin)
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', userId)
+      .single();
+
+    if (profileError || !profile) {
+      return NextResponse.json(
+        { error: 'User not found' },
+        { status: 404 }
+      );
+    }
+
+    if (profile.role === 'superadmin') {
+      return NextResponse.json(
+        { error: 'Cannot modify SuperAdmin permissions' },
+        { status: 403 }
+      );
+    }
+
+    // Update or create permissions
+    const { error: upsertError } = await supabase
+      .from('admin_permissions')
+      .upsert({
+        user_id: userId,
+        ...permissions,
+        updated_at: new Date().toISOString(),
+      }, {
+        onConflict: 'user_id'
+      });
+
+    if (upsertError) {
+      console.error('Permissions update error:', upsertError);
+      throw new Error(`Failed to update permissions: ${upsertError.message}`);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Permissions updated successfully',
+    });
+
+  } catch (error: any) {
+    console.error('PATCH /api/admin/users/[id] error:', error);
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  }
+}

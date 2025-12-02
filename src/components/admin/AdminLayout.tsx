@@ -53,6 +53,18 @@ const navigation: NavItem[] = [
     description: 'Manage ECD centres',
   },
   {
+    href: '/admin/admins',
+    label: 'Admin Management',
+    icon: '👥',
+    description: 'Manage platform admins',
+  },
+  {
+    href: '/admin/users',
+    label: 'User Management',
+    icon: '👤',
+    description: 'Manage all users',
+  },
+  {
     href: '/admin/builder',
     label: 'Page Builder',
     icon: '🎨',
