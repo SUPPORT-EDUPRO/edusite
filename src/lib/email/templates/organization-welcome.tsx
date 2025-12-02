@@ -55,7 +55,7 @@ export function OrganizationWelcomeEmail({
               </p>
 
               <p style="margin: 0 0 32px 0; color: #44403c; font-size: 16px; line-height: 1.6;">
-                <strong>Next Step:</strong> Click the buttons below to create your password and access your dashboards. Each platform requires its own password setup.
+                <strong>Next Step:</strong> Click the buttons below to set your password and log in. Each platform requires its own password setup.
               </p>
 
               <!-- Platform Cards -->
@@ -69,7 +69,7 @@ export function OrganizationWelcomeEmail({
                       Manage your website, registrations, and public-facing content
                     </p>
                     <a href="${eduSiteProLink}" style="display: inline-block; background-color: #d97706; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 2px 4px rgba(217, 119, 6, 0.3);">
-                      Set Up Password & Login →
+                      Set Password & Access Admin →
                     </a>
                   </td>
                 </tr>
@@ -86,7 +86,7 @@ export function OrganizationWelcomeEmail({
                       Communicate with parents, manage classes, and track student progress
                     </p>
                     <a href="${eduDashProLink}" style="display: inline-block; background-color: #3b82f6; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 15px; box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);">
-                      Set Up Password & Login →
+                      Set Password & Access Portal →
                     </a>
                   </td>
                 </tr>
@@ -99,7 +99,7 @@ export function OrganizationWelcomeEmail({
                   🚀 Getting Started
                 </h3>
                 <ul style="margin: 0; padding-left: 20px; color: #44403c; font-size: 14px; line-height: 1.8;">
-                  <li>Click the buttons above to set up your password</li>
+                  <li>Click the buttons above to set your password</li>
                   <li>Complete your organization profile</li>
                   <li>Add your campus information and staff members</li>
                   <li>Customize your registration forms</li>

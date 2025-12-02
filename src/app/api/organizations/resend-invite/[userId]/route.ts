@@ -80,22 +80,22 @@ export async function POST(
     const organizationName = orgRequest?.organization_name || 'Your Organization';
     const recipientName = orgRequest?.full_name || fullName;
 
-    // Generate proper invite links (not magic links) for password setup
-    // These redirect to dashboard AFTER password is set
+    // For already-registered users, use recovery link (password reset)
+    // These redirect to /reset-password page where user sets new password
     const { data: inviteLinkEduSite, error: linkErrorEduSite } = await supabaseEduSite.auth.admin.generateLink({
-      type: 'invite',
+      type: 'recovery',
       email: userEmail!,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`,
       }
     });
 
     if (linkErrorEduSite) {
-      console.error('[Resend Invite] EduSitePro invite link error:', linkErrorEduSite);
+      console.error('[Resend Invite] EduSitePro recovery link error:', linkErrorEduSite);
       throw new Error(`Failed to generate EduSitePro link: ${linkErrorEduSite.message}`);
     }
 
-    console.log('[Resend Invite] EduSitePro invite link generated');
+    console.log('[Resend Invite] EduSitePro recovery link generated');
 
     // Check if user exists in EduDashPro
     const { data: edudashUserData } = await supabaseEduDash.auth.admin.listUsers();
@@ -104,18 +104,18 @@ export async function POST(
     let inviteLinkEduDash = null;
     if (edudashUser) {
       const { data: link, error: linkErrorEduDash } = await supabaseEduDash.auth.admin.generateLink({
-        type: 'invite',
+        type: 'recovery',
         email: userEmail!,
         options: {
-          redirectTo: `${process.env.EDUDASH_SITE_URL}/dashboard`,
+          redirectTo: `${process.env.EDUDASH_SITE_URL}/reset-password`,
         }
       });
 
       if (linkErrorEduDash) {
-        console.error('[Resend Invite] EduDashPro invite link error:', linkErrorEduDash);
+        console.error('[Resend Invite] EduDashPro recovery link error:', linkErrorEduDash);
       } else {
         inviteLinkEduDash = link;
-        console.log('[Resend Invite] EduDashPro invite link generated');
+        console.log('[Resend Invite] EduDashPro recovery link generated');
       }
     }
 
