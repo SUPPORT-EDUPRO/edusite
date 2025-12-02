@@ -122,6 +122,16 @@ export default function RegistrationsPage() {
     }
   };
 
+  const filteredRegistrations = registrations.filter((reg) => {
+    const searchLower = searchTerm.toLowerCase();
+    return (
+      reg.student_first_name.toLowerCase().includes(searchLower) ||
+      reg.student_last_name.toLowerCase().includes(searchLower) ||
+      reg.guardian_name.toLowerCase().includes(searchLower) ||
+      reg.guardian_email.toLowerCase().includes(searchLower)
+    );
+  });
+
   const stats = {
     pending: registrations.filter(r => r.status === 'pending').length,
     approved: registrations.filter(r => r.status === 'approved').length,
