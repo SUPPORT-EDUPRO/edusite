@@ -35,6 +35,7 @@ export default function ResetPasswordPage() {
       if (emailFromHash) {
         setUserEmail(emailFromHash);
       }
+      
       const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -58,12 +59,7 @@ export default function ResetPasswordPage() {
         setValidSession(true);
         setUserEmail(session.user.email || null);
       } else {
-        // No valid session, but we might have email from URL
-        if (!userEmail) {
-          setError("Invalid or expired reset link. Please request a new password reset.");
-        } else {
-          setError("Invalid or expired reset link. Click below to request a new link.");
-        }
+        setError("Invalid or expired reset link. Please request a new password reset.");
       }
     };
     
@@ -152,7 +148,7 @@ export default function ResetPasswordPage() {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%)", fontFamily: "system-ui, sans-serif", overflowX: "hidden" }}>
-      <div style={{ width: "100%", maxWidth: "500px", background: "rgba(255,255,255,0.05)", backdropFilter: "blur(10px)", padding: "40px 5%", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.3)", boxSizing: "border-box", margin: "20px" }}>
+        <div style={{ width: "100%", maxWidth: "500px", background: "rgba(255,255,255,0.05)", backdropFilter: "blur(10px)", padding: "40px 5%", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 16, boxShadow: "0 8px 32px rgba(0,0,0,0.3)", boxSizing: "border-box", margin: "20px" }}>
           {/* Header with EduSitePro branding */}
           <div style={{ textAlign: "center", marginBottom: 32 }}>
             <div style={{ width: 64, height: 64, background: "linear-gradient(135deg, #f59e0b 0%, #f97316 100%)", borderRadius: 32, display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px", fontSize: 32 }}>
@@ -279,6 +275,11 @@ export default function ResetPasswordPage() {
                   boxShadow: loading ? "none" : "0 4px 12px rgba(245, 158, 11, 0.4)",
                 }}
               >
+                {loading ? "Setting Password..." : "Set Password & Continue"}
+              </button>
+            </form>
+          )}
+
           {!success && (
             <div style={{ marginTop: 24, textAlign: "center" }}>
               {showEmailInput && !userEmail ? (
@@ -322,11 +323,6 @@ export default function ResetPasswordPage() {
                 }}
               >
                 {resendLoading ? "Sending..." : showEmailInput && !userEmail ? "Send Reset Link" : "Request New Reset Link"}
-              </button>
-            </div>
-          )}    }}
-              >
-                {resendLoading ? "Sending..." : "Request New Reset Link"}
               </button>
             </div>
           )}
