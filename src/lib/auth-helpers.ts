@@ -17,7 +17,7 @@ export async function verifySuperAdmin() {
   );
 
   // Get session from cookies
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const authCookie = cookieStore.get('sb-access-token') || cookieStore.get('supabase-auth-token');
   
   if (!authCookie) {
@@ -39,6 +39,53 @@ export async function verifySuperAdmin() {
     .single();
 
   if (!profile || profile.role !== 'superadmin') {
+    return null;
+  }
+
+  return {
+    id: profile.id,
+    email: profile.email,
+    role: profile.role,
+    organization_id: profile.organization_id,
+  };
+}
+
+/**
+ * Check if the current user is an Admin (SuperAdmin or Platform Admin)
+ * Returns user profile if authorized, null otherwise
+ */
+export async function verifyAdmin() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+
+  // Get session from cookies
+  const cookieStore = await cookies();
+  const authCookie = cookieStore.get('sb-access-token') || cookieStore.get('supabase-auth-token');
+  
+  if (!authCookie) {
+    console.log('[Auth] No auth cookie found');
+    return null;
+  }
+
+  // Verify the session
+  const { data: { user }, error } = await supabase.auth.getUser(authCookie.value);
+  
+  if (error || !user) {
+    console.log('[Auth] User verification failed:', error);
+    return null;
+  }
+
+  // Check user role - allow both superadmin and admin
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, email, role, organization_id')
+    .eq('id', user.id)
+    .single();
+
+  if (!profile || (profile.role !== 'superadmin' && profile.role !== 'admin')) {
+    console.log('[Auth] User is not admin. Role:', profile?.role);
     return null;
   }
 

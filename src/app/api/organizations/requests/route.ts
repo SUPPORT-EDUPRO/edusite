@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { verifySuperAdmin, forbiddenResponse } from '@/lib/auth-helpers';
+import { verifyAdmin, forbiddenResponse } from '@/lib/auth-helpers';
 
 // CORS headers
 const corsHeaders = {
@@ -17,18 +17,18 @@ export async function OPTIONS(request: NextRequest) {
  * GET /api/organizations/requests
  * 
  * Fetch organization registration requests
- * Requires SuperAdmin authentication
+ * Requires Admin authentication (SuperAdmin or Platform Admin)
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify SuperAdmin access
-    const admin = await verifySuperAdmin();
+    // Verify Admin access (SuperAdmin or Platform Admin)
+    const admin = await verifyAdmin();
     if (!admin) {
       console.log('[Org Requests] Unauthorized access attempt');
-      return forbiddenResponse('SuperAdmin access required');
+      return forbiddenResponse('Admin access required');
     }
 
-    console.log('[Org Requests] SuperAdmin access granted:', admin.email);
+    console.log('[Org Requests] Admin access granted:', admin.email, 'Role:', admin.role);
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status'); // 'pending', 'approved', 'rejected', or null for all
