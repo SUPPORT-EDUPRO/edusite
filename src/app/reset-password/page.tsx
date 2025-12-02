@@ -160,35 +160,35 @@ export default function ResetPasswordPage() {
             <div>
               <div style={{ padding: 12, background: "rgba(220, 38, 38, 0.2)", border: "1px solid rgba(220, 38, 38, 0.4)", borderRadius: 8, marginBottom: 20 }}>
                 <p style={{ color: "#fca5a5", fontSize: 14, margin: 0, marginBottom: 8 }}>{error}</p>
+                {userEmail && !resendSuccess && (
+                  <p style={{ color: "#d1d5db", fontSize: 13, margin: 0 }}>
+                    <button
+                      onClick={requestNewLink}
+                      disabled={resendLoading}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#fbbf24",
+                        textDecoration: "underline",
+                        cursor: resendLoading ? "not-allowed" : "pointer",
+                        padding: 0,
+                        fontSize: 13,
+                        fontFamily: "inherit"
+                      }}
+                    >
+                      {resendLoading ? "Sending new link..." : "Click here to request a new reset link"}
+                    </button>
+                  </p>
+                )}
               </div>
               
-              {resendSuccess ? (
+              {resendSuccess && (
                 <div style={{ padding: 12, background: "rgba(34, 197, 94, 0.2)", border: "1px solid rgba(34, 197, 94, 0.4)", borderRadius: 8, marginBottom: 16 }}>
                   <p style={{ color: "#86efac", fontSize: 14, margin: 0 }}>
                     ✉️ Check your email! We've sent a new password reset link to <strong>{userEmail}</strong>
                   </p>
                 </div>
-              ) : userEmail ? (
-                <button
-                  onClick={requestNewLink}
-                  disabled={resendLoading}
-                  style={{
-                    width: "100%",
-                    padding: "12px 16px",
-                    background: resendLoading ? "rgba(107, 114, 128, 0.5)" : "linear-gradient(135deg, #f59e0b 0%, #f97316 100%)",
-                    color: resendLoading ? "#9CA3AF" : "#fff",
-                    border: 0,
-                    borderRadius: 8,
-                    fontSize: 16,
-                    fontWeight: 700,
-                    cursor: resendLoading ? "not-allowed" : "pointer",
-                    boxShadow: resendLoading ? "none" : "0 4px 12px rgba(245, 158, 11, 0.4)",
-                    marginBottom: 16
-                  }}
-                >
-                  {resendLoading ? "Sending..." : "📧 Request New Reset Link"}
-                </button>
-              ) : null}
+              )}
               
               <p style={{ color: "#d1d5db", fontSize: 14, textAlign: "center", marginBottom: 16 }}>
                 Need help?{" "}
