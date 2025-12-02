@@ -3,7 +3,7 @@
 
 UPDATE organizations
 SET 
-  terms_and_conditions_url = 'https://edusitepro.vercel.app/terms-young-eagles.html',
+  terms_and_conditions_url = 'https://edusitepro.edudashpro.org.za/terms-young-eagles.html',
   updated_at = NOW()
 WHERE slug = 'young-eagles-preschool'
    OR name ILIKE '%young eagles%';

@@ -40,7 +40,7 @@ This is done per the National Credit Act to:
 
 ### 2. HTML Version (Public Website)
 **Location:** `/home/king/Desktop/edusitepro/public/terms-young-eagles.html`
-**URL:** `https://edusitepro.vercel.app/terms-young-eagles.html`
+**URL:** `https://edusitepro.edudashpro.org.za/terms-young-eagles.html`
 - Beautiful, mobile-responsive design
 - Print-friendly styling
 - Color-coded sections (warnings, highlights, info boxes)
