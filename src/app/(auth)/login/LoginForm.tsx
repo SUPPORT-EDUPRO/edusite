@@ -2,7 +2,7 @@
 
 import { useFormState, useFormStatus } from 'react-dom';
 import { useState } from 'react';
-import { createClient } from '@/lib/auth';
+import { createClient } from '@/lib/supabase-client';
 
 interface LoginFormProps {
   signIn: (
