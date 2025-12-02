@@ -10,7 +10,7 @@ import { cookies } from 'next/headers';
  * Check if the current user is a SuperAdmin
  * Returns user profile if authorized, null otherwise
  */
-export async function verifySuper Admin() {
+export async function verifySuperAdmin() {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
