@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { createClient } from "@/lib/supabase-browser";
 
 interface RegistrationRequest {
   id: string;
@@ -43,7 +42,6 @@ export default function OrganizationRequestsPage() {
   const [selectedRequest, setSelectedRequest] = useState<RegistrationRequest | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [filter, setFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
-  const supabase = createClient();
 
   useEffect(() => {
     fetchRequests();
@@ -52,22 +50,17 @@ export default function OrganizationRequestsPage() {
   async function fetchRequests() {
     try {
       setLoading(true);
-      let query = supabase
-        .from("organization_registration_requests")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (filter !== "all") {
-        query = query.eq("status", filter);
+      const response = await fetch(`/api/organizations/requests?status=${filter}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch requests');
       }
 
-      const { data, error: fetchError } = await query;
-
-      if (fetchError) throw fetchError;
-      setRequests(data || []);
+      const result = await response.json();
+      setRequests(result.data || []);
       setError(null);
     } catch (err) {
-      console.error("Error fetching requests:", err);
+      console.error("Error fetching registrations:", err);
       setError(err instanceof Error ? err.message : "Failed to load requests");
     } finally {
       setLoading(false);
