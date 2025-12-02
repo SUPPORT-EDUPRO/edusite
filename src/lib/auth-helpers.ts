@@ -3,7 +3,7 @@
  * Server-side utilities for role-based access control
  */
 
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { type CookieOptions, createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 /**

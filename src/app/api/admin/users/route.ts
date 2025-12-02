@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+import { forbiddenResponse,verifySuperAdmin } from '@/lib/auth-helpers';
 import { getServiceRoleClient } from '@/lib/supabase';
-import { verifySuperAdmin, forbiddenResponse } from '@/lib/auth-helpers';
 
 // GET - Fetch all admin users
 export async function GET(req: NextRequest) {

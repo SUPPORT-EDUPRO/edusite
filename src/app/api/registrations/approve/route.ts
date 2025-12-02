@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+
 import { createClient } from '@/lib/auth';
-import { getServiceRoleClient } from '@/lib/supabase';
 import { generateParentWelcomeEmail } from '@/lib/email-templates/parent-welcome';
+import { getServiceRoleClient } from '@/lib/supabase';
 
 /**
  * POST /api/registrations/approve

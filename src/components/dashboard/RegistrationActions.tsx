@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { CheckCircle, Eye,XCircle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle, XCircle, Eye } from 'lucide-react';
+import { useEffect,useState } from 'react';
 
 interface Registration {
   id: string;

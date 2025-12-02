@@ -1,8 +1,8 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-import { supabase, getServiceRoleClient } from '@/lib/supabase';
 import { generateRegistrationConfirmation } from '@/lib/email-templates/registration-confirmation';
+import { getServiceRoleClient,supabase } from '@/lib/supabase';
 
 /**
  * Server-side registration endpoint.

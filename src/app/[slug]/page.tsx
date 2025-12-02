@@ -1,8 +1,8 @@
+import { createClient } from '@supabase/supabase-js';
 import { headers } from 'next/headers';
 import { notFound } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
 
-import { Navigation, type MenuItem } from '@/components/Navigation';
+import { type MenuItem,Navigation } from '@/components/Navigation';
 import { FloatingEnrollFab } from '@/components/site/FloatingEnrollFab';
 import { getBlock } from '@/lib/blocks';
 

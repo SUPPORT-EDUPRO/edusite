@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
+import { NextRequest, NextResponse } from 'next/server';
 
 // CORS headers for cross-origin requests from EduDashPro
 const corsHeaders = {

@@ -1,8 +1,8 @@
 'use client';
 
-import { Suspense, useState, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
+import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect,useState } from 'react';
 
 function UploadPaymentContent() {
   const searchParams = useSearchParams();

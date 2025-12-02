@@ -1,5 +1,6 @@
-import { createClient } from '@/lib/auth';
 import { NextResponse } from 'next/server';
+
+import { createClient } from '@/lib/auth';
 
 export async function POST() {
   const supabase = createClient();

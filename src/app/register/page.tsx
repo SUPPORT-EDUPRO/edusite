@@ -1,9 +1,8 @@
-import { headers } from 'next/headers';
-import { notFound } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
+import { headers } from 'next/headers';
 
-import { PublicRegistrationForm } from '@/components/registration/PublicRegistrationForm';
 import { PromoBanner } from '@/components/PromoBanner';
+import { PublicRegistrationForm } from '@/components/registration/PublicRegistrationForm';
 
 function srClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;

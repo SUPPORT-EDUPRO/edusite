@@ -1,6 +1,6 @@
-import { getServiceRoleClient } from '@/lib/supabase';
-import { createClient } from '@/lib/auth';
 import RegistrationsList from '@/components/dashboard/RegistrationsList';
+import { createClient } from '@/lib/auth';
+import { getServiceRoleClient } from '@/lib/supabase';
 
 export const metadata = { title: 'Registrations | Dashboard' };
 

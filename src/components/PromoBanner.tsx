@@ -1,7 +1,7 @@
 'use client';
 
+import { Gift,Sparkles, Timer, X } from 'lucide-react';
 import { useState } from 'react';
-import { X, Sparkles, Timer, Gift } from 'lucide-react';
 
 interface PromoBannerProps {
   code?: string;

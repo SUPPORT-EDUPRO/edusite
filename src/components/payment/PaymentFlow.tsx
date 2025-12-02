@@ -1,16 +1,15 @@
 'use client';
 
-import { useState } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { 
-  CreditCard, 
-  Building2, 
-  Smartphone, 
-  Upload,
-  CheckCircle,
   AlertCircle,
-  Loader2
-} from 'lucide-react';
+  Building2, 
+  CheckCircle,
+  CreditCard, 
+  Loader2,
+  Smartphone, 
+  Upload} from 'lucide-react';
+import { useState } from 'react';
 
 type PaymentMethod = 'credit_card' | 'eft' | 'bank_transfer' | 'ozow' | 'payfast' | 'snapscan';
 

@@ -1,10 +1,11 @@
-import { getServiceRoleClient } from '@/lib/supabase';
-import { createClient } from '@/lib/auth';
-import { notFound, redirect } from 'next/navigation';
+import { ArrowLeft, CheckCircle, CreditCard, FileText, User, XCircle } from 'lucide-react';
 import Link from 'next/link';
-import { ArrowLeft, User, Mail, Phone, MapPin, Calendar, FileText, CreditCard, CheckCircle, XCircle } from 'lucide-react';
+import { notFound, redirect } from 'next/navigation';
+
 import RegistrationActions from '@/components/dashboard/RegistrationActions';
 import ResendEmailButton from '@/components/dashboard/ResendEmailButton';
+import { createClient } from '@/lib/auth';
+import { getServiceRoleClient } from '@/lib/supabase';
 
 interface Registration {
   id: string;
