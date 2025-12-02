@@ -114,7 +114,7 @@ export function OrganizationWelcomeEmail({
                 </p>
                 <p style="margin: 0; color: #78716c; font-size: 14px;">
                   📧 Email: <a href="mailto:support@edudashpro.org.za" style="color: #d97706; text-decoration: none;">support@edudashpro.org.za</a><br>
-                  📱 WhatsApp: <a href="https://wa.me/27123456789" style="color: #d97706; text-decoration: none;">+27 12 345 6789</a>
+                  📱 WhatsApp: <a href="https://wa.me/27674770975" style="color: #d97706; text-decoration: none;">+27 67 477 0975</a>
                 </p>
               </div>
             </td>

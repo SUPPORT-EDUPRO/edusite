@@ -80,10 +80,10 @@ export async function POST(
     const organizationName = orgRequest?.organization_name || 'Your Organization';
     const recipientName = orgRequest?.full_name || fullName;
 
-    // For already confirmed users, we need to use generateLink instead of inviteUserByEmail
-    // Generate magic link for EduSitePro
-    const { data: magicLinkEduSite, error: linkErrorEduSite } = await supabaseEduSite.auth.admin.generateLink({
-      type: 'magiclink',
+    // Generate proper invite links (not magic links) for password setup
+    // These redirect to dashboard AFTER password is set
+    const { data: inviteLinkEduSite, error: linkErrorEduSite } = await supabaseEduSite.auth.admin.generateLink({
+      type: 'invite',
       email: userEmail!,
       options: {
         redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
@@ -91,20 +91,20 @@ export async function POST(
     });
 
     if (linkErrorEduSite) {
-      console.error('[Resend Invite] EduSitePro magic link error:', linkErrorEduSite);
+      console.error('[Resend Invite] EduSitePro invite link error:', linkErrorEduSite);
       throw new Error(`Failed to generate EduSitePro link: ${linkErrorEduSite.message}`);
     }
 
-    console.log('[Resend Invite] EduSitePro magic link generated');
+    console.log('[Resend Invite] EduSitePro invite link generated');
 
     // Check if user exists in EduDashPro
     const { data: edudashUserData } = await supabaseEduDash.auth.admin.listUsers();
     const edudashUser = edudashUserData.users.find(u => u.email === userEmail);
 
-    let magicLinkEduDash = null;
+    let inviteLinkEduDash = null;
     if (edudashUser) {
       const { data: link, error: linkErrorEduDash } = await supabaseEduDash.auth.admin.generateLink({
-        type: 'magiclink',
+        type: 'invite',
         email: userEmail!,
         options: {
           redirectTo: `${process.env.EDUDASH_SITE_URL}/dashboard`,
@@ -112,10 +112,10 @@ export async function POST(
       });
 
       if (linkErrorEduDash) {
-        console.error('[Resend Invite] EduDashPro magic link error:', linkErrorEduDash);
+        console.error('[Resend Invite] EduDashPro invite link error:', linkErrorEduDash);
       } else {
-        magicLinkEduDash = link;
-        console.log('[Resend Invite] EduDashPro magic link generated');
+        inviteLinkEduDash = link;
+        console.log('[Resend Invite] EduDashPro invite link generated');
       }
     }
 
@@ -126,8 +126,8 @@ export async function POST(
       to: userEmail!,
       organizationName,
       recipientName,
-      eduSiteProLink: magicLinkEduSite.properties.action_link,
-      eduDashProLink: magicLinkEduDash?.properties?.action_link,
+      eduSiteProLink: inviteLinkEduSite.properties.action_link,
+      eduDashProLink: inviteLinkEduDash?.properties?.action_link,
     });
     
     console.log('[Resend Invite] Email result:', emailResult);
@@ -137,8 +137,8 @@ export async function POST(
         success: true,
         message: `Welcome email sent to ${userEmail} via ${emailResult.provider}`,
         data: {
-          eduSiteProLink: magicLinkEduSite.properties.action_link,
-          eduDashProLink: magicLinkEduDash?.properties?.action_link,
+          eduSiteProLink: inviteLinkEduSite.properties.action_link,
+          eduDashProLink: inviteLinkEduDash?.properties?.action_link,
           emailProvider: emailResult.provider,
           emailId: emailResult.id,
         }
