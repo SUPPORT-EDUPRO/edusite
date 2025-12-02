@@ -2,6 +2,25 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 
+// CORS headers for cross-origin requests from EduDashPro
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*', // In production, use specific origin
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Max-Age': '86400',
+};
+
+/**
+ * OPTIONS /api/organizations/register
+ * Handle CORS preflight request
+ */
+export async function OPTIONS(request: NextRequest) {
+  return new NextResponse(null, {
+    status: 200,
+    headers: corsHeaders,
+  });
+}
+
 /**
  * POST /api/organizations/register
  * 
@@ -166,13 +185,13 @@ export async function POST(request: NextRequest) {
       if (requestError.code === '23505') { // Unique constraint violation
         return NextResponse.json(
           { error: 'Email or organization slug already exists' },
-          { status: 409 }
+          { status: 409, headers: corsHeaders }
         );
       }
       
       return NextResponse.json(
         { error: `Failed to submit registration: ${requestError.message}` },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -192,13 +211,13 @@ export async function POST(request: NextRequest) {
           status: 'pending',
         },
       },
-      { status: 201 }
+      { status: 201, headers: corsHeaders }
     );
   } catch (error: any) {
     console.error('[Org Registration] Unexpected error:', error);
     return NextResponse.json(
       { error: error.message || 'An unexpected error occurred' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }

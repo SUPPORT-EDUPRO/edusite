@@ -1,6 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// CORS headers for cross-origin requests
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, DELETE, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+// Handle preflight requests
+export async function OPTIONS(request: NextRequest) {
+  return NextResponse.json({}, { headers: corsHeaders });
+}
+
 /**
  * POST /api/organizations/approve/[requestId]
  * 
@@ -50,14 +62,14 @@ export async function POST(
     if (fetchError || !regRequest) {
       return NextResponse.json(
         { error: 'Registration request not found' },
-        { status: 404 }
+        { status: 404, headers: corsHeaders }
       );
     }
 
     if (regRequest.status !== 'pending') {
       return NextResponse.json(
         { error: `Request already ${regRequest.status}` },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -76,7 +88,7 @@ export async function POST(
       console.error('[Org Approval] Auth error:', authError);
       return NextResponse.json(
         { error: `Failed to create user: ${authError?.message}` },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -112,7 +124,7 @@ export async function POST(
       await supabaseEduSite.auth.admin.deleteUser(authData.user.id);
       return NextResponse.json(
         { error: `Failed to create organization: ${orgError.message}` },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -138,7 +150,7 @@ export async function POST(
       await supabaseEduSite.auth.admin.deleteUser(authData.user.id);
       return NextResponse.json(
         { error: `Failed to create centre: ${centreError.message}` },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -262,13 +274,13 @@ export async function POST(
           organizationName: regRequest.organization_name,
         },
       },
-      { status: 200 }
+      { status: 200, headers: corsHeaders }
     );
   } catch (error: any) {
     console.error('[Org Approval] Unexpected error:', error);
     return NextResponse.json(
       { error: error.message || 'An unexpected error occurred' },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
@@ -305,7 +317,7 @@ export async function DELETE(
     if (error) {
       return NextResponse.json(
         { error: error.message },
-        { status: 500 }
+        { status: 500, headers: corsHeaders }
       );
     }
 
@@ -313,12 +325,12 @@ export async function DELETE(
 
     return NextResponse.json(
       { success: true, message: 'Request rejected' },
-      { status: 200 }
+      { status: 200, headers: corsHeaders }
     );
   } catch (error: any) {
     return NextResponse.json(
       { error: error.message },
-      { status: 500 }
+      { status: 500, headers: corsHeaders }
     );
   }
 }
