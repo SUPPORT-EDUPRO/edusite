@@ -18,6 +18,10 @@ interface SendOrganizationWelcomeParams {
 export async function sendOrganizationWelcomeEmail(params: SendOrganizationWelcomeParams) {
   const { to, organizationName, recipientName, eduSiteProLink, eduDashProLink } = params;
 
+  console.log('[Email Service] Starting email send to:', to);
+  console.log('[Email Service] Organization:', organizationName);
+  console.log('[Email Service] RESEND_API_KEY present:', !!process.env.RESEND_API_KEY);
+
   const html = OrganizationWelcomeEmail({
     organizationName,
     recipientName,
@@ -27,6 +31,7 @@ export async function sendOrganizationWelcomeEmail(params: SendOrganizationWelco
 
   // Option 1: Using Resend API (recommended)
   if (process.env.RESEND_API_KEY) {
+    console.log('[Email Service] Using Resend API');
     try {
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
@@ -42,16 +47,19 @@ export async function sendOrganizationWelcomeEmail(params: SendOrganizationWelco
         }),
       });
 
+      const responseText = await response.text();
+      console.log('[Email Service] Resend API response status:', response.status);
+      console.log('[Email Service] Resend API response:', responseText);
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(`Resend API error: ${JSON.stringify(error)}`);
+        throw new Error(`Resend API error (${response.status}): ${responseText}`);
       }
 
-      const data = await response.json();
-      console.log('[Email] Sent via Resend:', data.id);
+      const data = JSON.parse(responseText);
+      console.log('[Email Service] Email sent successfully via Resend:', data.id);
       return { success: true, provider: 'resend', id: data.id };
     } catch (error) {
-      console.error('[Email] Resend error:', error);
+      console.error('[Email Service] Resend error:', error);
       throw error;
     }
   }

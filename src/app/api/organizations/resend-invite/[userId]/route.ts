@@ -120,27 +120,27 @@ export async function POST(
     }
 
     // Send branded welcome email with magic links
-    try {
-      await sendOrganizationWelcomeEmail({
-        to: userEmail!,
-        organizationName,
-        recipientName,
-        eduSiteProLink: magicLinkEduSite.properties.action_link,
-        eduDashProLink: magicLinkEduDash?.properties?.action_link,
-      });
-      console.log('[Resend Invite] Welcome email sent to:', userEmail);
-    } catch (emailError) {
-      console.error('[Resend Invite] Email sending failed:', emailError);
-      // Continue anyway - links are generated
-    }
+    console.log('[Resend Invite] About to send email with API key:', process.env.RESEND_API_KEY ? 'Present' : 'Missing');
+    
+    const emailResult = await sendOrganizationWelcomeEmail({
+      to: userEmail!,
+      organizationName,
+      recipientName,
+      eduSiteProLink: magicLinkEduSite.properties.action_link,
+      eduDashProLink: magicLinkEduDash?.properties?.action_link,
+    });
+    
+    console.log('[Resend Invite] Email result:', emailResult);
 
     return NextResponse.json(
       {
         success: true,
-        message: `Welcome email sent to ${userEmail}`,
+        message: `Welcome email sent to ${userEmail} via ${emailResult.provider}`,
         data: {
           eduSiteProLink: magicLinkEduSite.properties.action_link,
           eduDashProLink: magicLinkEduDash?.properties?.action_link,
+          emailProvider: emailResult.provider,
+          emailId: emailResult.id,
         }
       },
       { status: 200, headers: corsHeaders }
