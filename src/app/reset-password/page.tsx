@@ -16,10 +16,25 @@ export default function ResetPasswordPage() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [resendLoading, setResendLoading] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
+  const [manualEmail, setManualEmail] = useState("");
+  const [showEmailInput, setShowEmailInput] = useState(false);
 
   useEffect(() => {
     // Check if user came from password reset email
     const checkSession = async () => {
+      // Try to get email from URL parameters if available
+      const urlParams = new URLSearchParams(window.location.search);
+      const emailFromUrl = urlParams.get('email');
+      if (emailFromUrl) {
+        setUserEmail(emailFromUrl);
+      }
+      
+      // Also check hash parameters (Supabase sometimes uses hash)
+      const hashParams = new URLSearchParams(window.location.hash.substring(1));
+      const emailFromHash = hashParams.get('email');
+      if (emailFromHash) {
+        setUserEmail(emailFromHash);
+      }
       const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -43,7 +58,12 @@ export default function ResetPasswordPage() {
         setValidSession(true);
         setUserEmail(session.user.email || null);
       } else {
-        setError("Invalid or expired reset link. Please request a new password reset.");
+        // No valid session, but we might have email from URL
+        if (!userEmail) {
+          setError("Invalid or expired reset link. Please request a new password reset.");
+        } else {
+          setError("Invalid or expired reset link. Click below to request a new link.");
+        }
       }
     };
     
@@ -93,7 +113,11 @@ export default function ResetPasswordPage() {
   }
 
   async function requestNewLink() {
-    if (!userEmail) return;
+    const emailToUse = userEmail || manualEmail;
+    if (!emailToUse) {
+      setShowEmailInput(true);
+      return;
+    }
     
     setResendLoading(true);
     setResendSuccess(false);
@@ -103,8 +127,8 @@ export default function ResetPasswordPage() {
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
     
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(userEmail, {
-      redirectTo: `${window.location.origin}/reset-password`,
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(emailToUse, {
+      redirectTo: `${window.location.origin}/auth/callback?type=recovery&redirect_to=/reset-password`,
     });
     
     setResendLoading(false);
@@ -115,6 +139,7 @@ export default function ResetPasswordPage() {
     }
     
     setResendSuccess(true);
+    setShowEmailInput(false);
   }
 
   if (!validSession && !error) {
@@ -261,16 +286,35 @@ export default function ResetPasswordPage() {
                   boxShadow: loading ? "none" : "0 4px 12px rgba(245, 158, 11, 0.4)",
                 }}
               >
-                {loading ? "Setting Password..." : "Set Password & Continue"}
-              </button>
-            </form>
-          )}
-
           {!success && (
             <div style={{ marginTop: 24, textAlign: "center" }}>
+              {showEmailInput && !userEmail ? (
+                <div style={{ marginBottom: 16 }}>
+                  <label style={{ display: "block", color: "#fff", fontSize: 14, fontWeight: 500, marginBottom: 8, textAlign: "left" }}>
+                    Enter your email to request a new reset link:
+                  </label>
+                  <input
+                    type="email"
+                    value={manualEmail}
+                    onChange={(e) => setManualEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    style={{
+                      width: "100%",
+                      padding: "12px 14px",
+                      background: "rgba(255,255,255,0.08)",
+                      border: "1px solid rgba(255,255,255,0.15)",
+                      borderRadius: 8,
+                      color: "#fff",
+                      fontSize: 14,
+                      marginBottom: 12,
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              ) : null}
               <button
                 onClick={requestNewLink}
-                disabled={resendLoading || !userEmail}
+                disabled={resendLoading || (!userEmail && !manualEmail && !showEmailInput)}
                 style={{
                   width: "100%",
                   padding: "12px 16px",
@@ -280,9 +324,14 @@ export default function ResetPasswordPage() {
                   borderRadius: 8,
                   fontSize: 14,
                   fontWeight: 600,
-                  cursor: resendLoading || !userEmail ? "not-allowed" : "pointer",
+                  cursor: resendLoading || (!userEmail && !manualEmail && !showEmailInput) ? "not-allowed" : "pointer",
                   marginBottom: 16,
                 }}
+              >
+                {resendLoading ? "Sending..." : showEmailInput && !userEmail ? "Send Reset Link" : "Request New Reset Link"}
+              </button>
+            </div>
+          )}    }}
               >
                 {resendLoading ? "Sending..." : "Request New Reset Link"}
               </button>
