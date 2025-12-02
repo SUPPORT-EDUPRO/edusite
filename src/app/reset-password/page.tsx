@@ -14,6 +14,8 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [validSession, setValidSession] = useState(false);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendSuccess, setResendSuccess] = useState(false);
 
   useEffect(() => {
     // Check if user came from password reset email
@@ -87,6 +89,31 @@ export default function ResetPasswordPage() {
     }, 2000);
   }
 
+  async function requestNewLink() {
+    if (!userEmail) return;
+    
+    setResendLoading(true);
+    setResendSuccess(false);
+    
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(userEmail, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    
+    setResendLoading(false);
+    
+    if (resetError) {
+      setError(resetError.message);
+      return;
+    }
+    
+    setResendSuccess(true);
+  }
+
   if (!validSession && !error) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #1a1a2e 0%, #0f0f1a 100%)", fontFamily: "system-ui, sans-serif" }}>
@@ -132,12 +159,41 @@ export default function ResetPasswordPage() {
           {!validSession ? (
             <div>
               <div style={{ padding: 12, background: "rgba(220, 38, 38, 0.2)", border: "1px solid rgba(220, 38, 38, 0.4)", borderRadius: 8, marginBottom: 20 }}>
-                <p style={{ color: "#fca5a5", fontSize: 14, margin: 0 }}>{error}</p>
+                <p style={{ color: "#fca5a5", fontSize: 14, margin: 0, marginBottom: 8 }}>{error}</p>
               </div>
+              
+              {resendSuccess ? (
+                <div style={{ padding: 12, background: "rgba(34, 197, 94, 0.2)", border: "1px solid rgba(34, 197, 94, 0.4)", borderRadius: 8, marginBottom: 16 }}>
+                  <p style={{ color: "#86efac", fontSize: 14, margin: 0 }}>
+                    ✉️ Check your email! We've sent a new password reset link to <strong>{userEmail}</strong>
+                  </p>
+                </div>
+              ) : userEmail ? (
+                <button
+                  onClick={requestNewLink}
+                  disabled={resendLoading}
+                  style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    background: resendLoading ? "rgba(107, 114, 128, 0.5)" : "linear-gradient(135deg, #f59e0b 0%, #f97316 100%)",
+                    color: resendLoading ? "#9CA3AF" : "#fff",
+                    border: 0,
+                    borderRadius: 8,
+                    fontSize: 16,
+                    fontWeight: 700,
+                    cursor: resendLoading ? "not-allowed" : "pointer",
+                    boxShadow: resendLoading ? "none" : "0 4px 12px rgba(245, 158, 11, 0.4)",
+                    marginBottom: 16
+                  }}
+                >
+                  {resendLoading ? "Sending..." : "📧 Request New Reset Link"}
+                </button>
+              ) : null}
+              
               <p style={{ color: "#d1d5db", fontSize: 14, textAlign: "center", marginBottom: 16 }}>
-                Please contact support at{" "}
+                Need help?{" "}
                 <a href="https://wa.me/27674770975" style={{ color: "#fbbf24", textDecoration: "none" }}>
-                  +27 67 477 0975
+                  WhatsApp Support
                 </a>
               </p>
             </div>
