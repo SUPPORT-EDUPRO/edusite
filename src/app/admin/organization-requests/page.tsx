@@ -34,6 +34,9 @@ interface RegistrationRequest {
   approved_at?: string;
   edusitepro_org_id?: string;
   edudashpro_org_id?: string;
+  created_user_id?: string;
+  created_organization_id?: string;
+  created_centre_id?: string;
 }
 
 export default function OrganizationRequestsPage() {
@@ -137,6 +140,44 @@ export default function OrganizationRequestsPage() {
     } catch (err) {
       console.error("Error rejecting request:", err);
       alert(err instanceof Error ? err.message : "Failed to reject request");
+    } finally {
+      setActionLoading(null);
+    }
+  }
+
+  async function handleResendInvite(request: RegistrationRequest) {
+    if (!request.edusitepro_org_id || request.status !== 'approved') {
+      alert('Can only resend invitations for approved requests');
+      return;
+    }
+
+    if (!confirm(`Resend invitation email to ${request.email}?`)) {
+      return;
+    }
+
+    try {
+      setActionLoading(request.id);
+      
+      // Get the created user ID from the registration request
+      const userId = request.created_user_id;
+      if (!userId) {
+        throw new Error('User ID not found for this request');
+      }
+
+      const response = await fetch(`/api/organizations/resend-invite/${userId}`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to resend invitation");
+      }
+
+      const result = await response.json();
+      alert(`✅ ${result.message}\n\nThe user will receive password setup emails for both EduSitePro and EduDashPro.`);
+    } catch (err) {
+      console.error("Error resending invitation:", err);
+      alert(err instanceof Error ? err.message : "Failed to resend invitation");
     } finally {
       setActionLoading(null);
     }
@@ -270,6 +311,21 @@ export default function OrganizationRequestsPage() {
                       className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-semibold text-sm hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       ✕ Reject
+                    </button>
+                  </div>
+                )}
+
+                {request.status === "approved" && (
+                  <div className="flex gap-3 pt-4 border-t border-gray-200">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleResendInvite(request);
+                      }}
+                      disabled={actionLoading === request.id}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-semibold text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {actionLoading === request.id ? "Sending..." : "📧 Resend Invitation"}
                     </button>
                   </div>
                 )}
