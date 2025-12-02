@@ -275,11 +275,12 @@ export async function POST(
     // 8. Send branded welcome email with setup links
     try {
       // Generate magic links for password setup (use recovery type for password reset)
+      // Redirect through /auth/callback for proper session handling
       const { data: magicLinkEduSite } = await supabaseEduSite.auth.admin.generateLink({
         type: 'recovery',
         email: regRequest.email,
         options: {
-          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`,
+          redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=recovery&redirect_to=/reset-password`,
         }
       });
 
@@ -289,7 +290,7 @@ export async function POST(
           type: 'recovery',
           email: regRequest.email,
           options: {
-            redirectTo: `${process.env.EDUDASH_SITE_URL}/reset-password`,
+            redirectTo: `${process.env.EDUDASH_SITE_URL}/auth/callback?type=recovery&redirect_to=/reset-password`,
           }
         });
         magicLinkEduDash = link;

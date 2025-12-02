@@ -81,12 +81,12 @@ export async function POST(
     const recipientName = orgRequest?.full_name || fullName;
 
     // For already-registered users, use recovery link (password reset)
-    // These redirect to /reset-password page where user sets new password
+    // Redirect through /auth/callback which will then route to /reset-password
     const { data: inviteLinkEduSite, error: linkErrorEduSite } = await supabaseEduSite.auth.admin.generateLink({
       type: 'recovery',
       email: userEmail!,
       options: {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`,
+        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=recovery&redirect_to=/reset-password`,
       }
     });
 
@@ -107,7 +107,7 @@ export async function POST(
         type: 'recovery',
         email: userEmail!,
         options: {
-          redirectTo: `${process.env.EDUDASH_SITE_URL}/reset-password`,
+          redirectTo: `${process.env.EDUDASH_SITE_URL}/auth/callback?type=recovery&redirect_to=/reset-password`,
         }
       });
 
