@@ -83,9 +83,12 @@ export default function ResetPasswordPage() {
 
     setSuccess(true);
     
-    // Redirect to dashboard after 2 seconds
+    // Sign out to clear any existing session, then redirect to login
+    await supabase.auth.signOut();
+    
+    // Redirect to login after 2 seconds
     setTimeout(() => {
-      router.push("/dashboard");
+      router.push("/login");
     }, 2000);
   }
 
@@ -200,9 +203,9 @@ export default function ResetPasswordPage() {
           ) : success ? (
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
-              <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Password Set Successfully!</h2>
+              <h2 style={{ color: "#fff", fontSize: 18, fontWeight: 600, marginBottom: 12 }}>Password Reset Successfully!</h2>
               <p style={{ color: "#d1d5db", fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
-                Your password has been created. Redirecting you to your dashboard...
+                Your password has been updated. Redirecting you to the login page...
               </p>
             </div>
           ) : (
