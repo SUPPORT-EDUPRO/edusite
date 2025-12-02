@@ -62,35 +62,35 @@ export async function POST(request: NextRequest) {
     if (!email || !password || !fullName || !phoneNumber) {
       return NextResponse.json(
         { error: 'Personal information is incomplete' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
     if (!organizationName || !organizationSlug || !billingEmail) {
       return NextResponse.json(
         { error: 'Organization information is incomplete' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
     if (!addressLine1 || !city || !province || !postalCode) {
       return NextResponse.json(
         { error: 'Organization address is incomplete' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
     if (!campusName) {
       return NextResponse.json(
         { error: 'Campus name is required' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
     if (password.length < 8) {
       return NextResponse.json(
         { error: 'Password must be at least 8 characters' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -98,14 +98,14 @@ export async function POST(request: NextRequest) {
     if (!/^[a-z0-9-]+$/.test(organizationSlug)) {
       return NextResponse.json(
         { error: 'Organization slug can only contain lowercase letters, numbers, and hyphens' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
     if (campusCode && !/^[A-Z0-9-]+$/.test(campusCode)) {
       return NextResponse.json(
         { error: 'Campus code must be uppercase letters, numbers, and hyphens' },
-        { status: 400 }
+        { status: 400, headers: corsHeaders }
       );
     }
 
@@ -149,7 +149,7 @@ export async function POST(request: NextRequest) {
     const passwordHash = await bcrypt.hash(password, 12);
 
     // Create registration request
-    const { data: request, error: requestError } = await supabase
+    const { data: registrationRequest, error: requestError } = await supabase
       .from('organization_registration_requests')
       .insert({
         email,
@@ -195,19 +195,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[Org Registration] Request created:', request.id);
+    console.log('[Org Registration] Request created:', registrationRequest.id);
 
     // TODO: Send notification to SuperAdmin (email or dashboard notification)
-    // await sendAdminNotification(request);
+    // await sendAdminNotification(registrationRequest);
 
     return NextResponse.json(
       {
         success: true,
         message: 'Registration submitted successfully. A SuperAdmin will review your application shortly.',
         data: {
-          requestId: request.id,
-          email: request.email,
-          organizationName: request.organization_name,
+          requestId: registrationRequest.id,
+          email: registrationRequest.email,
+          organizationName: registrationRequest.organization_name,
           status: 'pending',
         },
       },
