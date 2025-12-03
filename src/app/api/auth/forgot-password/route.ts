@@ -42,16 +42,10 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate password reset link
-    // The redirectTo must point to /reset-password for the final destination
-    // Supabase will handle the callback automatically via the action_link
-    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`;
-    
+    // The action_link from generateLink already includes the code and redirects correctly
     const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: email,
-      options: {
-        redirectTo: redirectUrl,
-      },
     });
 
     if (resetError) {
@@ -63,7 +57,6 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[Forgot Password] Reset link generated for:', email);
-    console.log('[Forgot Password] Redirect URL:', redirectUrl);
     
     // Extract the action link (this is the actual magic link that includes the token)
     const resetLink = resetData?.properties?.action_link;

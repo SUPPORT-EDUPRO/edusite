@@ -22,8 +22,14 @@ function AuthCallbackContent() {
       const redirectTo = searchParams.get('redirect_to') || searchParams.get('redirectTo');
       const error = searchParams.get('error');
       const errorDescription = searchParams.get('error_description');
+      
+      // Check hash parameters as Supabase recovery links sometimes use hash
+      const hash = typeof window !== 'undefined' ? window.location.hash : '';
+      const hashParams = new URLSearchParams(hash.substring(1));
+      const hashType = hashParams.get('type');
+      const accessToken = hashParams.get('access_token');
 
-      console.log('[Auth Callback] Type:', type, 'Code:', code ? 'present' : 'missing', 'Next:', next);
+      console.log('[Auth Callback] Type:', type || hashType, 'Code:', code ? 'present' : 'missing', 'Access Token:', accessToken ? 'present' : 'missing');
 
       // Handle OAuth errors
       if (error) {
@@ -45,7 +51,8 @@ function AuthCallbackContent() {
         console.log('[Auth Callback] Session exchanged successfully');
 
         // Redirect based on type or next parameter
-        if (type === 'recovery' || redirectTo?.includes('reset-password')) {
+        if (type === 'recovery' || hashType === 'recovery' || redirectTo?.includes('reset-password')) {
+          console.log('[Auth Callback] Recovery detected - redirecting to reset password');
           router.push('/reset-password');
         } else if (next) {
           router.push(next);
