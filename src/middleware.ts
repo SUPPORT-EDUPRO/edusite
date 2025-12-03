@@ -174,9 +174,9 @@ export async function middleware(request: NextRequest) {
     }
 
     // Platform admin (superadmin) should use /admin
-    // Tenant admin (principal_admin) should use /dashboard
+    // Tenant admin (principal_admin, organization_admin, etc.) should use /dashboard
     const isPlatformAdmin = profile.role === 'superadmin';
-    const isTenantAdmin = ['principal_admin', 'principal', 'admin'].includes(profile.role) && profile.organization_id;
+    const isTenantAdmin = ['principal_admin', 'principal', 'admin', 'organization_admin'].includes(profile.role) && profile.organization_id;
 
     // Block non-superadmins from accessing /admin routes
     if (path.startsWith('/admin')) {
