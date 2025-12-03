@@ -42,8 +42,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate password reset link
-    // Note: We need to redirect through /auth/callback for proper session handling
-    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback?type=recovery&redirect_to=/reset-password`;
+    // The redirectTo must point to /reset-password for the final destination
+    // Supabase will handle the callback automatically via the action_link
+    const redirectUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`;
     
     const { data: resetData, error: resetError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
