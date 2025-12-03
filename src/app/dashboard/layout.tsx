@@ -33,7 +33,7 @@ export default async function DashboardLayout({
     .single();
 
   // Check if user has tenant admin role
-  const tenantAdminRoles = ['principal', 'principal_admin', 'admin'];
+  const tenantAdminRoles = ['principal', 'principal_admin', 'admin', 'organization_admin'];
   const hasTenantAccess = profile && tenantAdminRoles.includes(profile.role);
 
   // If user doesn't have tenant admin role, show error
