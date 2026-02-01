@@ -21,6 +21,21 @@ interface PublicRegistrationFormProps {
   schoolName?: string;
   slug?: string;
   initialBranding?: OrganizationBranding | null;
+  registrationFee?: number;
+  activeCampaign?: ActiveCampaign | null;
+}
+
+interface ActiveCampaign {
+  id: string;
+  name?: string;
+  description?: string | null;
+  discount_type: 'percentage' | 'fixed_amount' | 'waive_registration' | 'first_month_free';
+  discount_value: number | null;
+  promo_code: string | null;
+  max_redemptions: number | null;
+  current_redemptions: number | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 export interface OrganizationBranding {
@@ -113,30 +128,41 @@ export function PublicRegistrationForm({
   schoolName = 'Our School',
   slug,
   initialBranding = null,
+  registrationFee,
+  activeCampaign,
 }: PublicRegistrationFormProps) {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const [paymentReference, setPaymentReference] = useState<string>('');
   const [organizationBranding, setOrganizationBranding] = useState<OrganizationBranding | null>(initialBranding);
   const [formData, setFormData] = useState(getInitialFormState());
   const [nearbySchools, setNearbySchools] = useState<NearbySchool[]>([]);
   const [showNearbySchools, setShowNearbySchools] = useState(false);
   const [campaignInfo, setCampaignInfo] = useState<{
     valid: boolean;
-    discount: number;
+    discountValue: number;
+    discountType: ActiveCampaign['discount_type'];
+    discountAmount: number;
     remaining: number;
     maxRedemptions: number;
     code: string;
   } | null>(null);
   const [submittedWithDiscount, setSubmittedWithDiscount] = useState<{
     valid: boolean;
-    discount: number;
+    discountValue: number;
+    discountType: ActiveCampaign['discount_type'];
+    discountAmount: number;
     remaining: number;
     maxRedemptions: number;
     code: string;
   } | null>(null);
+  const [submittedFeeAmount, setSubmittedFeeAmount] = useState<number | null>(null);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
-  const [liveSpots, setLiveSpots] = useState<number | null>(null);
+  const [liveSpots, setLiveSpots] = useState<number | null>(() => {
+    if (!activeCampaign?.max_redemptions || activeCampaign.current_redemptions === null || activeCampaign.current_redemptions === undefined) {
+      return null;
+    }
+    return Math.max(0, activeCampaign.max_redemptions - activeCampaign.current_redemptions);
+  });
   const [emailValidation, setEmailValidation] = useState<{
     checking: boolean;
     exists: boolean;
@@ -158,6 +184,36 @@ export function PublicRegistrationForm({
     showDoctorInfo: cfg?.showDoctorInfo ?? true,
     showEmergencyContact: cfg?.showEmergencyContact ?? true,
   } as const;
+
+  const baseRegistrationFee = typeof registrationFee === 'number' ? registrationFee : 200;
+
+  const getDiscountAmount = useCallback((campaign: ActiveCampaign | null) => {
+    if (!campaign) return 0;
+    const value = campaign.discount_value ?? 0;
+    if (campaign.discount_type === 'percentage') {
+      return baseRegistrationFee * (value / 100);
+    }
+    if (campaign.discount_type === 'fixed_amount') {
+      return value;
+    }
+    if (campaign.discount_type === 'waive_registration') {
+      return baseRegistrationFee;
+    }
+    return 0;
+  }, [baseRegistrationFee]);
+
+  const formatDiscountLabel = useCallback((campaign: { discount_type: ActiveCampaign['discount_type']; discount_value: number | null }) => {
+    const value = campaign.discount_value ?? 0;
+    if (campaign.discount_type === 'percentage') return `${value}% OFF`;
+    if (campaign.discount_type === 'fixed_amount') return `R${value} OFF`;
+    if (campaign.discount_type === 'waive_registration') return '100% OFF';
+    if (campaign.discount_type === 'first_month_free') return 'First Month Free';
+    return `${value}% OFF`;
+  }, []);
+
+  const activeCampaignDiscountAmount = getDiscountAmount(activeCampaign || null);
+  const discountedRegistrationFee = Math.max(0, baseRegistrationFee - activeCampaignDiscountAmount);
+  const activeCampaignLabel = activeCampaign ? formatDiscountLabel(activeCampaign) : '';
 
   // Check if all required fields are filled
   const isFormValid = () => {
@@ -186,39 +242,34 @@ export function PublicRegistrationForm({
     return requiredTextFields.every((field) => field && field.trim() !== '') && formData.termsAccepted === true;
   };
 
-  // Fetch live spots remaining for Young Eagles promo
+  // Fetch live spots remaining for active campaign
   useEffect(() => {
     const fetchLiveSpots = async () => {
-      if (organizationId !== 'ba79097c-1b93-4b48-bcbe-df73878ab4d1') return;
+      if (!activeCampaign?.id || !activeCampaign.max_redemptions) return;
       
       try {
         const { data, error } = await supabase
           .from('marketing_campaigns')
           .select('current_redemptions, max_redemptions')
-          .eq('coupon_code', 'WELCOME2026')
-          .eq('active', true)
+          .eq('id', activeCampaign.id)
           .single();
 
         if (!error && data) {
           const remaining = data.max_redemptions - data.current_redemptions;
           setLiveSpots(remaining > 0 ? remaining : 0);
         } else if (error) {
-          // Silently handle RLS/table access errors - use default value
-          // This prevents 406 errors from flooding the console
-          setLiveSpots(40); // Default fallback value
+          setLiveSpots(null);
         }
       } catch (err) {
-        // Silently use fallback value on any error
-        setLiveSpots(40);
+        setLiveSpots(null);
       }
     };
 
     fetchLiveSpots();
     
-    // Only poll if initial fetch succeeded, otherwise keep fallback
-    const interval = setInterval(fetchLiveSpots, 30000); // Reduced frequency to 30s
+    const interval = setInterval(fetchLiveSpots, 30000);
     return () => clearInterval(interval);
-  }, [organizationId]);
+  }, [activeCampaign?.id, activeCampaign?.max_redemptions]);
 
   // Validate email for duplicates in real-time
   useEffect(() => {
@@ -289,21 +340,26 @@ export function PublicRegistrationForm({
       try {
         const { data: campaign, error } = await supabase
           .from('marketing_campaigns')
-          .select('id, promo_code, discount_type, discount_percentage, discount_amount, current_redemptions, max_redemptions, active')
+          .select('id, promo_code, discount_type, discount_value, current_redemptions, max_redemptions, active')
           .eq('organization_id', organizationId)
-          .eq('coupon_code', code)
+          .eq('promo_code', code)
           .eq('active', true)
           .single();
 
         if (!error && campaign) {
-          const remaining = campaign.max_redemptions - campaign.current_redemptions;
-          const hasSlots = remaining > 0;
+          const maxRedemptions = campaign.max_redemptions ?? 0;
+          const currentRedemptions = campaign.current_redemptions ?? 0;
+          const remaining = maxRedemptions ? maxRedemptions - currentRedemptions : 0;
+          const hasSlots = maxRedemptions ? remaining > 0 : true;
+          const discountAmount = getDiscountAmount(campaign as ActiveCampaign);
           
           setCampaignInfo({
             valid: hasSlots,
-            discount: campaign.discount_type === 'percentage' ? campaign.discount_percentage : campaign.discount_amount,
+            discountValue: campaign.discount_value ?? 0,
+            discountType: campaign.discount_type,
+            discountAmount,
             remaining,
-            maxRedemptions: campaign.max_redemptions,
+            maxRedemptions,
             code: campaign.promo_code
           });
         } else {
@@ -319,7 +375,7 @@ export function PublicRegistrationForm({
 
     const timer = setTimeout(validateCoupon, 500);
     return () => clearTimeout(timer);
-  }, [formData.couponCode, organizationId]);
+  }, [formData.couponCode, organizationId, getDiscountAmount]);
 
   // Fetch nearby schools when address changes (debounced)
   useEffect(() => {
@@ -468,15 +524,14 @@ export function PublicRegistrationForm({
       // Validate and apply coupon code if provided
       let campaignId = null;
       let discountAmount = 0;
-      const baseRegistrationFee = 400; // R400 base fee for Young Eagles
       let finalAmount = baseRegistrationFee;
       
       if (formData.couponCode.trim()) {
         const { data: campaign, error: campaignError } = await supabase
           .from('marketing_campaigns')
-          .select('id, discount_type, discount_percentage, discount_amount, current_redemptions, max_redemptions')
+          .select('id, discount_type, discount_value, current_redemptions, max_redemptions, promo_code')
           .eq('organization_id', organizationId)
-          .eq('coupon_code', formData.couponCode.trim().toUpperCase())
+          .eq('promo_code', formData.couponCode.trim().toUpperCase())
           .eq('active', true)
           .lte('start_date', new Date().toISOString())
           .gte('end_date', new Date().toISOString())
@@ -486,22 +541,27 @@ export function PublicRegistrationForm({
           console.error('Error validating coupon:', campaignError);
         } else if (campaign) {
           // Check if promo still has slots
-          const remaining = campaign.max_redemptions - campaign.current_redemptions;
-          if (remaining > 0) {
+          const maxRedemptions = campaign.max_redemptions ?? 0;
+          const currentRedemptions = campaign.current_redemptions ?? 0;
+          const remaining = maxRedemptions ? maxRedemptions - currentRedemptions : 0;
+          if (!maxRedemptions || remaining > 0) {
             campaignId = campaign.id;
-            // Calculate discount
-            if (campaign.discount_type === 'percentage' && campaign.discount_percentage) {
-              discountAmount = campaign.discount_percentage;
-              finalAmount = baseRegistrationFee * (1 - campaign.discount_percentage / 100);
-            } else if (campaign.discount_type === 'fixed' && campaign.discount_amount) {
-              discountAmount = campaign.discount_amount;
-              finalAmount = Math.max(0, baseRegistrationFee - campaign.discount_amount);
+            const discountValue = campaign.discount_value ?? 0;
+            if (campaign.discount_type === 'percentage') {
+              discountAmount = baseRegistrationFee * (discountValue / 100);
+              finalAmount = Math.max(0, baseRegistrationFee - discountAmount);
+            } else if (campaign.discount_type === 'fixed_amount') {
+              discountAmount = discountValue;
+              finalAmount = Math.max(0, baseRegistrationFee - discountAmount);
+            } else if (campaign.discount_type === 'waive_registration') {
+              discountAmount = baseRegistrationFee;
+              finalAmount = 0;
             }
           } else {
-            alert('Sorry, all discount slots have been claimed. Registration will proceed at full price (R400).');
+            alert(`Sorry, all discount slots have been claimed. Registration will proceed at full price (R${baseRegistrationFee}).`);
           }
         } else if (formData.couponCode.trim()) {
-          alert('Invalid or expired coupon code. Registration will proceed at full price (R400).');
+          alert(`Invalid or expired coupon code. Registration will proceed at full price (R${baseRegistrationFee}).`);
         }
       }
 
@@ -603,8 +663,7 @@ export function PublicRegistrationForm({
       }
 
       // Generate payment reference BEFORE insert
-      const generatedPaymentReference = `REG-${new Date().getFullYear()}-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-      setPaymentReference(generatedPaymentReference);
+      const paymentReference = `REG-${new Date().getFullYear()}-${Date.now()}-${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
 
       // Insert registration request with all fields
       const { data, error } = await supabase
@@ -662,7 +721,7 @@ export function PublicRegistrationForm({
           reason_for_transfer: formData.reasonForTransfer,
           special_requests: formData.specialRequests,
           how_did_you_hear: formData.howDidYouHear,
-          coupon_code: formData.couponCode,
+          final_amount: finalAmount,
           sibling_enrolled: formData.siblingEnrolled,
           sibling_student_id: formData.siblingStudentId || null,
           // Preschool-Specific
@@ -696,7 +755,7 @@ export function PublicRegistrationForm({
           status: 'pending',
           priority_points: formData.siblingEnrolled ? 5 : 0,
           documents: additionalData,
-          payment_reference: generatedPaymentReference,
+          payment_reference: paymentReference,
         })
         .select()
         .single();
@@ -710,6 +769,7 @@ export function PublicRegistrationForm({
       if (campaignInfo && campaignInfo.valid) {
         setSubmittedWithDiscount(campaignInfo);
       }
+      setSubmittedFeeAmount(finalAmount);
 
       // Send confirmation email to parent
       try {
@@ -727,7 +787,7 @@ export function PublicRegistrationForm({
             discountApplied: discountAmount > 0,
             discountAmount: discountAmount,
             registrationId: data.id,
-            paymentReference: generatedPaymentReference,
+            paymentReference: paymentReference,
             organizationSlug: slug || 'young-eagles',
           }),
         });
@@ -770,11 +830,17 @@ export function PublicRegistrationForm({
             </h3>
             <div className="space-y-2 text-sm text-blue-800 dark:text-blue-300">
               <p className="font-medium">
-                Registration Fee: <span className="text-lg font-bold">R{submittedWithDiscount ? '200.00' : '400.00'}</span>
+                Registration Fee:{' '}
+                <span className="text-lg font-bold">
+                  R{(submittedFeeAmount ?? baseRegistrationFee).toFixed(2)}
+                </span>
               </p>
               {submittedWithDiscount && (
                 <p className="text-green-700 dark:text-green-400">
-                  ✓ {submittedWithDiscount.discount}% discount applied with {submittedWithDiscount.code}!
+                  ✓ {formatDiscountLabel({
+                    discount_type: submittedWithDiscount.discountType,
+                    discount_value: submittedWithDiscount.discountValue
+                  })} applied with {submittedWithDiscount.code} (save R{submittedWithDiscount.discountAmount.toFixed(2)})!
                 </p>
               )}
               <div className="mt-3 rounded-md bg-white/50 p-3 dark:bg-gray-800/50">
@@ -783,22 +849,15 @@ export function PublicRegistrationForm({
                   <p><strong>Bank:</strong> First National Bank (FNB)</p>
                   <p><strong>Account Name:</strong> Young Eagles Education Platform</p>
                   <p><strong>Account Number:</strong> 62777403181 </p>
-                  <p><strong>Reference:</strong> {paymentReference.split('-').pop()}</p>
+                  <p><strong>Reference:</strong> REG-{formData.studentFirstName}-{formData.studentLastName}</p>
                 </div>
               </div>
               <p className="mt-2 text-xs">
-                📧 Payment details sent to {formData.guardianEmail}
+                📧 Payment details will be sent to {formData.guardianEmail}
               </p>
-              <div className="mt-3 rounded-md bg-amber-50 p-3 border border-amber-200">
-                <p className="text-xs font-semibold text-amber-900 mb-1">⚠️ Important Next Steps:</p>
-                <ol className="text-xs text-amber-800 space-y-1 ml-4 list-decimal">
-                  <li>Make payment using bank details above</li>
-                  <li>Check your email for confirmation link</li>
-                  <li><strong>Click "Upload Proof of Payment" button in email</strong></li>
-                  <li>Upload your payment slip/screenshot</li>
-                  <li>Wait for admin verification (1-2 business days)</li>
-                </ol>
-              </div>
+              <p className="text-xs italic">
+                * Your registration will be approved after payment verification
+              </p>
             </div>
           </div>
 
@@ -851,19 +910,23 @@ export function PublicRegistrationForm({
             
             <div className="flex flex-col gap-3">
               <a
-                href={`mailto:${formData.guardianEmail}?subject=Registration%20Approved%20for%20${formData.studentFirstName}%20${formData.studentLastName}&body=Thank%20you%20for%20registering%20at%20${encodeURIComponent(schoolName)}.%0A%0APlease%20check%20your%20email%20for%20the%20approval%20notification%20and%20next%20steps.`}
+                href="https://edudashpro.org.za"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-3 text-sm font-semibold text-white transition hover:from-purple-700 hover:to-pink-700"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" />
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
-                Go to Email
+                Open EduDash Pro Web App
               </a>
               
               <p className="text-center text-xs text-gray-600 dark:text-gray-400">
-                Click the button above to open your email app and check for your registration confirmation.
+                Access the app from any device - desktop, tablet, or mobile browser.
                 <br />
-                <strong>Important:</strong> You will receive login details via email once your registration is approved.
+                <strong>Mobile users:</strong> Tap "Add to Home Screen" for app-like experience!
               </p>
               
               <div className="rounded-lg bg-gray-50 p-3 dark:bg-gray-800">
@@ -947,7 +1010,7 @@ export function PublicRegistrationForm({
       )}
 
       {/* Limited Time Offer Banner */}
-      {organizationId === 'ba79097c-1b93-4b48-bcbe-df73878ab4d1' && (
+      {activeCampaign?.promo_code && (
         <div className="mb-6 overflow-hidden rounded-lg border-2 border-purple-400 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 p-1 shadow-xl">
           <div className="rounded-md bg-white p-5 dark:bg-gray-800">
             <div className="w-full">
@@ -971,21 +1034,32 @@ export function PublicRegistrationForm({
                 )}
               </div>
               <p className="mb-3 text-sm sm:text-base text-gray-700 dark:text-gray-300">
-                <span className="font-bold text-red-600">Was R400.00, now <span className="text-green-600">R200.00</span>!</span><br />
-                Be one of the first 50 families to register and get <strong className="text-purple-600 dark:text-purple-400">50% OFF</strong> your registration fee!
+                {activeCampaignDiscountAmount > 0 ? (
+                  <span className="font-bold text-red-600">
+                    Was R{baseRegistrationFee.toFixed(2)}, now <span className="text-green-600">R{discountedRegistrationFee.toFixed(2)}</span>!
+                  </span>
+                ) : (
+                  <span className="font-bold text-gray-700 dark:text-gray-200">
+                    Registration fee: R{baseRegistrationFee.toFixed(2)}
+                  </span>
+                )}
+                <br />
+                {activeCampaignLabel && (
+                  <>Register now and get <strong className="text-purple-600 dark:text-purple-400">{activeCampaignLabel}</strong> on your registration fee!</>
+                )}
               </p>
                 <div className="rounded-lg bg-gradient-to-r from-purple-100 to-pink-100 p-3 dark:from-purple-900/30 dark:to-pink-900/30">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                     <div className="w-full">
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                        Use code: <span className="font-mono text-base sm:text-lg text-purple-600 dark:text-purple-400">WELCOME2026</span>
+                        Use code: <span className="font-mono text-base sm:text-lg text-purple-600 dark:text-purple-400">{activeCampaign.promo_code}</span>
                       </p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Valid until January 30, 2026
+                        {activeCampaign.end_date ? `Valid until ${new Date(activeCampaign.end_date).toLocaleDateString()}` : 'Limited time offer'}
                       </p>
                     </div>
                     <div className="text-left sm:text-right">
-                      <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">50% OFF</p>
+                      <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">{activeCampaignLabel || 'Limited Offer'}</p>
                       <p className="text-xs text-gray-600 dark:text-gray-400">Registration Fee</p>
                     </div>
                   </div>
@@ -1980,7 +2054,7 @@ export function PublicRegistrationForm({
                 value={formData.couponCode}
                 onChange={handleChange}
                 className="w-full rounded-lg border border-gray-300 px-4 py-2 font-mono uppercase focus:ring-2 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
-                placeholder="WELCOME2026"
+                placeholder={activeCampaign?.promo_code || 'PROMO2026'}
                 maxLength={20}
               />
               {validatingCoupon && (
@@ -2002,23 +2076,30 @@ export function PublicRegistrationForm({
                     <div className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
                       <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                        {campaignInfo.discount}% Discount Applied!
+                        {formatDiscountLabel({
+                          discount_type: campaignInfo.discountType,
+                          discount_value: campaignInfo.discountValue
+                        })} Applied!
                       </span>
                     </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-green-600 dark:text-green-400">
-                        🎉 Only {campaignInfo.remaining} of {campaignInfo.maxRedemptions} spots remaining!
-                      </span>
-                      <span className="rounded-full bg-green-600 px-2 py-0.5 text-xs font-bold text-white">
-                        {campaignInfo.remaining} LEFT
-                      </span>
-                    </div>
+                    {campaignInfo.maxRedemptions > 0 && (
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-green-600 dark:text-green-400">
+                          🎉 Only {campaignInfo.remaining} of {campaignInfo.maxRedemptions} spots remaining!
+                        </span>
+                        <span className="rounded-full bg-green-600 px-2 py-0.5 text-xs font-bold text-white">
+                          {campaignInfo.remaining} LEFT
+                        </span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
                     <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
                     <span className="text-sm text-red-700 dark:text-red-300">
-                      Sorry, all {campaignInfo.maxRedemptions} discount slots have been claimed.
+                      {campaignInfo.maxRedemptions > 0
+                        ? `Sorry, all ${campaignInfo.maxRedemptions} discount slots have been claimed.`
+                        : 'Sorry, this discount is no longer available.'}
                     </span>
                   </div>
                 )}
@@ -2181,80 +2262,6 @@ export function PublicRegistrationForm({
 
       {/* Submit Button */}
       <div className="border-t border-gray-200 pt-6 dark:border-gray-700">
-        {/* Registration Fee Summary */}
-        <div className="mb-6 overflow-hidden rounded-xl border-2 border-purple-300 bg-gradient-to-br from-purple-50 to-pink-50 shadow-lg dark:border-purple-700 dark:from-purple-900/30 dark:to-pink-900/30">
-          <div className="px-5 py-6">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-purple-600 text-white text-xl">
-                💰
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                  Registration Fee Summary
-                </h3>
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  One-time registration fee (non-refundable)
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-lg bg-white dark:bg-gray-800 px-4 py-3 shadow-sm">
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Base Registration Fee
-                </span>
-                <span className={`text-lg font-bold ${campaignInfo?.valid ? 'text-gray-400 line-through dark:text-gray-600' : 'text-gray-900 dark:text-white'}`}>
-                  R400.00
-                </span>
-              </div>
-
-              {campaignInfo?.valid && (
-                <div className="flex items-center justify-between rounded-lg bg-green-100 dark:bg-green-900/30 px-4 py-3 shadow-sm border border-green-300 dark:border-green-700">
-                  <div className="flex items-center gap-2">
-                    <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
-                    <span className="text-sm font-medium text-green-800 dark:text-green-300">
-                      {formData.couponCode.toUpperCase()} Discount ({campaignInfo.discount}% off)
-                    </span>
-                  </div>
-                  <span className="text-lg font-bold text-green-700 dark:text-green-400">
-                    -R{(400 * campaignInfo.discount / 100).toFixed(2)}
-                  </span>
-                </div>
-              )}
-
-              <div className="border-t-2 border-dashed border-purple-300 dark:border-purple-700 pt-3">
-                <div className="flex items-center justify-between rounded-lg bg-purple-100 dark:bg-purple-900/40 px-4 py-4 border-2 border-purple-400 dark:border-purple-600">
-                  <span className="text-base font-bold text-purple-900 dark:text-purple-200">
-                    Total Amount Due
-                  </span>
-                  <div className="text-right">
-                    <span className="text-3xl font-extrabold text-purple-700 dark:text-purple-300">
-                      R{campaignInfo?.valid ? (400 * (1 - campaignInfo.discount / 100)).toFixed(2) : '400.00'}
-                    </span>
-                    {campaignInfo?.valid && (
-                      <p className="text-xs text-purple-600 dark:text-purple-400 font-medium mt-1">
-                        🎉 You saved R{(400 * campaignInfo.discount / 100).toFixed(2)}!
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {!campaignInfo && formData.couponCode && !validatingCoupon && (
-                <div className="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 px-4 py-3">
-                  <p className="text-xs text-yellow-800 dark:text-yellow-300">
-                    ⚠️ Promo code "{formData.couponCode}" is invalid or expired. Full fee of R400 will apply.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            <p className="mt-4 text-xs text-center text-gray-600 dark:text-gray-400">
-              💳 Payment details will be sent to your email after submission
-            </p>
-          </div>
-        </div>
-
         <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
           <div className="flex items-start gap-2">
             <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-blue-600 dark:text-blue-400" />

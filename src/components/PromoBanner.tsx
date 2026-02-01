@@ -5,13 +5,15 @@ import { useState } from 'react';
 
 interface PromoBannerProps {
   code?: string;
-  discount?: number;
+  discountValue?: number;
+  discountType?: 'percentage' | 'fixed_amount' | 'waive_registration' | 'first_month_free';
   endDate?: string;
 }
 
 export function PromoBanner({ 
   code = 'WELCOME2026', 
-  discount = 50,
+  discountValue = 50,
+  discountType = 'percentage',
   endDate = '2026-04-01'
 }: PromoBannerProps) {
   const [isVisible, setIsVisible] = useState(true);
@@ -21,6 +23,14 @@ export function PromoBanner({
   const daysRemaining = Math.ceil(
     (new Date(endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
   );
+
+  const discountLabel = (() => {
+    if (discountType === 'percentage') return `${discountValue}% OFF`;
+    if (discountType === 'fixed_amount') return `R${discountValue} OFF`;
+    if (discountType === 'waive_registration') return '100% OFF';
+    if (discountType === 'first_month_free') return 'First Month Free';
+    return `${discountValue}% OFF`;
+  })();
 
   return (
     <div className="relative overflow-hidden bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 animate-gradient-x">
@@ -48,7 +58,7 @@ export function PromoBanner({
                 </h3>
               </div>
               <p className="text-sm text-white/90 sm:text-base">
-                Get <span className="font-extrabold text-yellow-300 text-xl sm:text-2xl">{discount}% OFF</span> registration fees
+                Get <span className="font-extrabold text-yellow-300 text-xl sm:text-2xl">{discountLabel}</span> registration fees
               </p>
             </div>
           </div>

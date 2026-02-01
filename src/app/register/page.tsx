@@ -4,6 +4,8 @@ import { headers } from 'next/headers';
 import { PromoBanner } from '@/components/PromoBanner';
 import { PublicRegistrationForm } from '@/components/registration/PublicRegistrationForm';
 
+export const dynamic = 'force-dynamic';
+
 function srClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -105,21 +107,53 @@ export default async function RegistrationPage() {
     );
   }
 
+  const nowIso = new Date().toISOString();
+
+  const { data: registrationFeeRow } = await supabase
+    .from('organization_fee_structures')
+    .select('amount')
+    .eq('organization_id', organization.id)
+    .eq('fee_type', 'registration_fee')
+    .eq('active', true)
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { data: activeCampaign } = await supabase
+    .from('marketing_campaigns')
+    .select(
+      'id, name, description, discount_type, discount_value, promo_code, max_redemptions, current_redemptions, start_date, end_date, active, featured'
+    )
+    .eq('organization_id', organization.id)
+    .eq('active', true)
+    .not('promo_code', 'is', null)
+    .lte('start_date', nowIso)
+    .gte('end_date', nowIso)
+    .order('featured', { ascending: false })
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
   const formProps = {
     organizationId: organization.id,
     schoolCode: organization.school_code,
     schoolName: organization.name,
     initialBranding: organization,
+    registrationFee: registrationFeeRow?.amount ?? 200,
+    activeCampaign: activeCampaign || null,
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
       {/* Promotional Banner */}
-      <PromoBanner 
-        code="WELCOME2026" 
-        discount={50}
-        endDate="2026-04-01"
-      />
+      {activeCampaign?.promo_code && (
+        <PromoBanner 
+          code={activeCampaign.promo_code} 
+          discountValue={activeCampaign.discount_value || 0}
+          discountType={activeCampaign.discount_type}
+          endDate={activeCampaign.end_date}
+        />
+      )}
       
       {/* Registration Form */}
       <div className="py-12">

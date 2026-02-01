@@ -9,12 +9,14 @@ import { getServiceRoleClient } from '@/lib/supabase';
 interface Campaign {
   id: string;
   organization_id: string;
-  campaign_name: string;
-  coupon_code: string;
-  discount_type: 'percentage' | 'fixed';
-  discount_percentage: number | null;
-  discount_amount: number | null;
-  max_redemptions: number;
+  name: string;
+  promo_code: string;
+  campaign_type: 'early_bird' | 'sibling_discount' | 'referral_bonus' | 'seasonal_promo' | 'bundle_offer' | 'scholarship';
+  description?: string | null;
+  terms_conditions?: string | null;
+  discount_type: 'percentage' | 'fixed_amount' | 'waive_registration' | 'first_month_free';
+  discount_value: number | null;
+  max_redemptions: number | null;
   current_redemptions: number;
   start_date: string;
   end_date: string;
@@ -34,11 +36,13 @@ export default function CampaignsPage() {
   const [editing, setEditing] = useState<EditingCampaign | null>(null);
   const [creating, setCreating] = useState(false);
   const [newCampaign, setNewCampaign] = useState({
-    campaign_name: '',
-    coupon_code: '',
-    discount_type: 'percentage' as 'percentage' | 'fixed',
-    discount_percentage: 50,
-    discount_amount: 200,
+    name: '',
+    promo_code: '',
+    campaign_type: 'early_bird' as Campaign['campaign_type'],
+    description: '',
+    terms_conditions: '',
+    discount_type: 'percentage' as Campaign['discount_type'],
+    discount_value: 50,
     max_redemptions: 50,
     start_date: new Date().toISOString().split('T')[0],
     end_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 90 days
@@ -96,11 +100,15 @@ export default function CampaignsPage() {
         .from('marketing_campaigns')
         .insert({
           organization_id: profile.organization_id,
-          campaign_name: newCampaign.campaign_name,
-          coupon_code: newCampaign.coupon_code.toUpperCase(),
+          name: newCampaign.name,
+          promo_code: newCampaign.promo_code.toUpperCase(),
+          campaign_type: newCampaign.campaign_type,
+          description: newCampaign.description || null,
+          terms_conditions: newCampaign.terms_conditions || null,
           discount_type: newCampaign.discount_type,
-          discount_percentage: newCampaign.discount_type === 'percentage' ? newCampaign.discount_percentage : null,
-          discount_amount: newCampaign.discount_type === 'fixed' ? newCampaign.discount_amount : null,
+          discount_value: ['percentage', 'fixed_amount'].includes(newCampaign.discount_type)
+            ? newCampaign.discount_value
+            : null,
           max_redemptions: newCampaign.max_redemptions,
           current_redemptions: 0,
           start_date: newCampaign.start_date,
@@ -113,11 +121,13 @@ export default function CampaignsPage() {
       alert('✅ Campaign created successfully!');
       setCreating(false);
       setNewCampaign({
-        campaign_name: '',
-        coupon_code: '',
+        name: '',
+        promo_code: '',
+        campaign_type: 'early_bird',
+        description: '',
+        terms_conditions: '',
         discount_type: 'percentage',
-        discount_percentage: 50,
-        discount_amount: 200,
+        discount_value: 50,
         max_redemptions: 50,
         start_date: new Date().toISOString().split('T')[0],
         end_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
@@ -176,8 +186,8 @@ export default function CampaignsPage() {
     }
   };
 
-  const handleDeleteCampaign = async (campaignId: string, couponCode: string) => {
-    if (!confirm(`Are you sure you want to delete campaign "${couponCode}"? This action cannot be undone.`)) {
+  const handleDeleteCampaign = async (campaignId: string, promoCode: string) => {
+    if (!confirm(`Are you sure you want to delete campaign "${promoCode}"? This action cannot be undone.`)) {
       return;
     }
 
@@ -200,17 +210,29 @@ export default function CampaignsPage() {
   };
 
   const getDiscountDisplay = (campaign: Campaign) => {
+    const value = campaign.discount_value ?? 0;
     if (campaign.discount_type === 'percentage') {
-      return `${campaign.discount_percentage}% off`;
+      return `${value}% off`;
     }
-    return `R${campaign.discount_amount} off`;
+    if (campaign.discount_type === 'fixed_amount') {
+      return `R${value} off`;
+    }
+    if (campaign.discount_type === 'waive_registration') {
+      return 'Registration Fee Waived';
+    }
+    if (campaign.discount_type === 'first_month_free') {
+      return 'First Month Free';
+    }
+    return 'Discount';
   };
 
   const getRemainingSlots = (campaign: Campaign) => {
-    return campaign.max_redemptions - campaign.current_redemptions;
+    if (campaign.max_redemptions === null) return null;
+    return Math.max(0, campaign.max_redemptions - campaign.current_redemptions);
   };
 
   const getUsagePercentage = (campaign: Campaign) => {
+    if (!campaign.max_redemptions || campaign.max_redemptions <= 0) return 0;
     return (campaign.current_redemptions / campaign.max_redemptions) * 100;
   };
 
@@ -271,8 +293,8 @@ export default function CampaignsPage() {
                 </label>
                 <input
                   type="text"
-                  value={newCampaign.campaign_name}
-                  onChange={(e) => setNewCampaign({ ...newCampaign, campaign_name: e.target.value })}
+                  value={newCampaign.name}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, name: e.target.value })}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   placeholder="Early Bird Registration 2026"
                 />
@@ -280,12 +302,30 @@ export default function CampaignsPage() {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
-                  Coupon Code
+                  Campaign Type
+                </label>
+                <select
+                  value={newCampaign.campaign_type}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, campaign_type: e.target.value as Campaign['campaign_type'] })}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                >
+                  <option value="early_bird">Early Bird</option>
+                  <option value="sibling_discount">Sibling Discount</option>
+                  <option value="referral_bonus">Referral Bonus</option>
+                  <option value="seasonal_promo">Seasonal Promo</option>
+                  <option value="bundle_offer">Bundle Offer</option>
+                  <option value="scholarship">Scholarship</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  Promo Code
                 </label>
                 <input
                   type="text"
-                  value={newCampaign.coupon_code}
-                  onChange={(e) => setNewCampaign({ ...newCampaign, coupon_code: e.target.value.toUpperCase() })}
+                  value={newCampaign.promo_code}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, promo_code: e.target.value.toUpperCase() })}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 font-mono uppercase dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   placeholder="WELCOME2026"
                 />
@@ -297,11 +337,13 @@ export default function CampaignsPage() {
                 </label>
                 <select
                   value={newCampaign.discount_type}
-                  onChange={(e) => setNewCampaign({ ...newCampaign, discount_type: e.target.value as 'percentage' | 'fixed' })}
+                  onChange={(e) => setNewCampaign({ ...newCampaign, discount_type: e.target.value as Campaign['discount_type'] })}
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                 >
                   <option value="percentage">Percentage Off</option>
-                  <option value="fixed">Fixed Amount Off</option>
+                  <option value="fixed_amount">Fixed Amount Off</option>
+                  <option value="waive_registration">Waive Registration Fee</option>
+                  <option value="first_month_free">First Month Free</option>
                 </select>
               </div>
 
@@ -314,12 +356,12 @@ export default function CampaignsPage() {
                     type="number"
                     min="1"
                     max="100"
-                    value={newCampaign.discount_percentage}
-                    onChange={(e) => setNewCampaign({ ...newCampaign, discount_percentage: parseInt(e.target.value) })}
+                    value={newCampaign.discount_value}
+                    onChange={(e) => setNewCampaign({ ...newCampaign, discount_value: parseInt(e.target.value) })}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   />
                 </div>
-              ) : (
+              ) : newCampaign.discount_type === 'fixed_amount' ? (
                 <div>
                   <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-300">
                     Discount Amount (Rands)
@@ -327,10 +369,14 @@ export default function CampaignsPage() {
                   <input
                     type="number"
                     min="1"
-                    value={newCampaign.discount_amount}
-                    onChange={(e) => setNewCampaign({ ...newCampaign, discount_amount: parseInt(e.target.value) })}
+                    value={newCampaign.discount_value}
+                    onChange={(e) => setNewCampaign({ ...newCampaign, discount_value: parseInt(e.target.value) })}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
                   />
+                </div>
+              ) : (
+                <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
+                  This discount type does not require a numeric value.
                 </div>
               )}
 
@@ -388,7 +434,7 @@ export default function CampaignsPage() {
             <div className="mt-6 flex gap-3">
               <button
                 onClick={handleCreateCampaign}
-                disabled={!newCampaign.campaign_name || !newCampaign.coupon_code}
+                disabled={!newCampaign.name || !newCampaign.promo_code}
                 className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700 disabled:opacity-50"
               >
                 <Save className="h-4 w-4" />
@@ -427,11 +473,11 @@ export default function CampaignsPage() {
                     <div className="flex items-center gap-2">
                       <Ticket className={`h-5 w-5 ${isActive ? 'text-green-600' : 'text-gray-400'}`} />
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                        {campaign.campaign_name}
+                        {campaign.name}
                       </h3>
                     </div>
                     <p className="mt-1 font-mono text-sm text-gray-600 dark:text-gray-400">
-                      Code: <span className="font-bold text-purple-600 dark:text-purple-400">{campaign.coupon_code}</span>
+                      Code: <span className="font-bold text-purple-600 dark:text-purple-400">{campaign.promo_code}</span>
                     </p>
                   </div>
                   <div className="flex gap-2">
@@ -463,7 +509,7 @@ export default function CampaignsPage() {
                   <div className="mb-2 flex items-center justify-between text-sm">
                     <span className="text-gray-600 dark:text-gray-400">Redemptions</span>
                     <span className="font-semibold text-gray-900 dark:text-white">
-                      {campaign.current_redemptions} / {campaign.max_redemptions}
+                      {campaign.current_redemptions} / {campaign.max_redemptions ?? '∞'}
                     </span>
                   </div>
                   <div className="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
@@ -479,7 +525,7 @@ export default function CampaignsPage() {
                     />
                   </div>
                   <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                    {remaining} slots remaining
+                    {remaining === null ? 'Unlimited slots' : `${remaining} slots remaining`}
                   </p>
                 </div>
 
@@ -536,7 +582,7 @@ export default function CampaignsPage() {
                   <button
                     onClick={() => setEditing({
                       id: campaign.id,
-                      max_redemptions: campaign.max_redemptions,
+                      max_redemptions: campaign.max_redemptions ?? 0,
                       current_redemptions: campaign.current_redemptions,
                     })}
                     className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
@@ -559,7 +605,7 @@ export default function CampaignsPage() {
 
                 {/* Delete Button */}
                 <button
-                  onClick={() => handleDeleteCampaign(campaign.id, campaign.coupon_code)}
+                  onClick={() => handleDeleteCampaign(campaign.id, campaign.promo_code)}
                   className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 transition hover:bg-red-100 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/40"
                 >
                   <Trash2 className="h-4 w-4" />
