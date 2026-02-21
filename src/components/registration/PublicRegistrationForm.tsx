@@ -792,7 +792,7 @@ export function PublicRegistrationForm({
               </p>
               {submittedWithDiscount && (
                 <p className="text-green-700 dark:text-green-400">
-                  ✓ {submittedWithDiscount.discount}% discount applied with {submittedWithDiscount.code}!
+                  ✓ {submittedWithDiscount.discountValue}% discount applied with {submittedWithDiscount.code}!
                 </p>
               )}
               <div className="mt-3 rounded-md bg-white/50 p-3 dark:bg-gray-800/50">
@@ -2047,7 +2047,7 @@ export function PublicRegistrationForm({
                     <div className="flex items-center gap-2">
                       <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
                       <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                        {campaignInfo.discount}% Discount Applied!
+                        {campaignInfo.discountValue}% Discount Applied!
                       </span>
                     </div>
                     <div className="flex items-center justify-between text-xs">
