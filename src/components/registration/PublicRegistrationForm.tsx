@@ -291,18 +291,34 @@ export function PublicRegistrationForm({
 
       setValidatingCoupon(true);
       try {
+        const escapedCode = code.replace(/"/g, '\\"');
         const { data: campaign, error } = await supabase
           .from('marketing_campaigns')
-          .select('id, promo_code, coupon_code, discount_type, discount_percentage, discount_amount, discount_value, current_redemptions, max_redemptions, active')
+          .select('id, promo_code, coupon_code, discount_type, discount_percentage, discount_amount, discount_value, current_redemptions, max_redemptions, active, start_date, end_date')
           .eq('organization_id', organizationId)
-          .or(`coupon_code.eq.${code},promo_code.eq.${code}`)
+          .or(`coupon_code.eq."${escapedCode}",promo_code.eq."${escapedCode}"`)
           .eq('active', true)
           .maybeSingle();
 
         if (!error && campaign) {
+          const now = new Date();
+          const startDate = campaign.start_date ? new Date(campaign.start_date) : null;
+          const endDate = campaign.end_date ? new Date(campaign.end_date) : null;
+          const isWithinDateWindow =
+            (!startDate || startDate <= now) &&
+            (!endDate || endDate >= now);
+
+          if (!isWithinDateWindow) {
+            setCampaignInfo(null);
+            return;
+          }
+
           const baseFee = 400; // R400 base registration fee
-          const remaining = (campaign.max_redemptions ?? 0) - (campaign.current_redemptions ?? 0);
-          const hasSlots = remaining > 0;
+          const hasMaxRedemptions = campaign.max_redemptions != null;
+          const remaining = hasMaxRedemptions
+            ? Math.max(0, (campaign.max_redemptions ?? 0) - (campaign.current_redemptions ?? 0))
+            : 0;
+          const hasSlots = !hasMaxRedemptions || remaining > 0;
           const pct = campaign.discount_percentage ?? campaign.discount_value;
           const fixedAmt = campaign.discount_amount ?? campaign.discount_value;
           const isPct = campaign.discount_type === 'percentage' || (campaign.discount_type !== 'fixed' && pct != null);
@@ -486,22 +502,34 @@ export function PublicRegistrationForm({
       
       if (formData.couponCode.trim()) {
         const codeUpper = formData.couponCode.trim().toUpperCase();
+        const escapedCode = codeUpper.replace(/"/g, '\\"');
         const { data: campaign, error: campaignError } = await supabase
           .from('marketing_campaigns')
-          .select('id, discount_type, discount_percentage, discount_amount, discount_value, current_redemptions, max_redemptions')
+          .select('id, discount_type, discount_percentage, discount_amount, discount_value, current_redemptions, max_redemptions, start_date, end_date')
           .eq('organization_id', organizationId)
-          .or(`coupon_code.eq.${codeUpper},promo_code.eq.${codeUpper}`)
+          .or(`coupon_code.eq."${escapedCode}",promo_code.eq."${escapedCode}"`)
           .eq('active', true)
-          .lte('start_date', new Date().toISOString())
-          .gte('end_date', new Date().toISOString())
           .maybeSingle();
 
         if (campaignError) {
           console.error('Error validating coupon:', campaignError);
         } else if (campaign) {
+          const now = new Date();
+          const startDate = campaign.start_date ? new Date(campaign.start_date) : null;
+          const endDate = campaign.end_date ? new Date(campaign.end_date) : null;
+          const isWithinDateWindow =
+            (!startDate || startDate <= now) &&
+            (!endDate || endDate >= now);
+
+          if (!isWithinDateWindow) {
+            alert('Invalid or expired coupon code. Registration will proceed at full price (R400).');
+          } else {
           // Check if promo still has slots
-          const remaining = (campaign.max_redemptions ?? 0) - (campaign.current_redemptions ?? 0);
-          if (remaining > 0) {
+          const hasMaxRedemptions = campaign.max_redemptions != null;
+          const remaining = hasMaxRedemptions
+            ? Math.max(0, (campaign.max_redemptions ?? 0) - (campaign.current_redemptions ?? 0))
+            : 0;
+          if (!hasMaxRedemptions || remaining > 0) {
             campaignId = campaign.id;
             // Calculate discount: always use baseRegistrationFee (R400) - never a derived/reduced base
             const pct = campaign.discount_percentage ?? campaign.discount_value;
@@ -518,6 +546,7 @@ export function PublicRegistrationForm({
             }
           } else {
             alert('Sorry, all discount slots have been claimed. Registration will proceed at full price (R400).');
+          }
           }
         } else if (formData.couponCode.trim()) {
           alert('Invalid or expired coupon code. Registration will proceed at full price (R400).');
