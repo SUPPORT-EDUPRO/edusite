@@ -1,4 +1,11 @@
 {
   "buildCommand": "npm run build",
-  "installCommand": "npm install"
+  "installCommand": "npm install",
+  "redirects": [
+    {
+      "source": "/ecd-training",
+      "destination": "https://app.edudashpro.org.za/ecd-training",
+      "permanent": false
+    }
+  ]
 }
