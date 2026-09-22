@@ -94,6 +94,17 @@ describe('YoungEagles2027RegistrationPreview', () => {
 
     expect(source).not.toMatch(/\bredirect\s*\(/);
     expect(source).toContain('YoungEagles2027RegistrationPreview');
+    expect(source).toContain('loadActiveRegistrationCampaign');
+    expect(source).toContain('YOUNG_EAGLES_ORGANIZATION_ID');
+  });
+
+  it('does not hardcode a 2026(FEB) promo banner on the current public form', () => {
+    const source = fs.readFileSync(
+      path.resolve(process.cwd(), 'src/components/registration/PublicRegistrationForm.tsx'),
+      'utf8',
+    );
+    expect(source).not.toContain('2026(FEB)');
+    expect(source).toContain('RegistrationCampaignBanner');
   });
 
   it('lets a family give media permission and upload the three documents on the consent step', async () => {
@@ -157,5 +168,52 @@ describe('YoungEagles2027RegistrationPreview', () => {
     expect(screen.getByRole('heading', { name: 'Review your application' })).toBeVisible();
     expect(screen.getByText(/amahle-birth.pdf/)).toBeVisible();
     expect(screen.getByText(/Permission given for school photographs and videos/)).toBeVisible();
+  });
+
+  it('shows the published fees above the registration form, including aftercare', () => {
+    render(<YoungEagles2027RegistrationPreview />);
+
+    const feesHeading = screen.getByRole('heading', { name: 'Fees' });
+    const form = screen.getByLabelText('2027 registration application preview');
+    expect(
+      feesHeading.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByText('6 months - 1 year')).toBeVisible();
+    expect(screen.getByText(/R950/)).toBeVisible();
+    expect(screen.getByText('Aftercare')).toBeVisible();
+    expect(screen.getByText('R300.00')).toBeVisible();
+    expect(screen.queryByText(/R850/)).not.toBeInTheDocument();
+    expect(screen.queryByText('2026(FEB)')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/registration campaign/i)).not.toBeInTheDocument();
+  });
+
+  it('shows the live tenant campaign banner above the form when a 50% campaign is active', () => {
+    render(
+      <YoungEagles2027RegistrationPreview
+        activeCampaign={{
+          id: 'campaign-ye',
+          organizationId: 'ba79097c-1b93-4b48-bcbe-df73878ab4d1',
+          code: 'EAGLES50',
+          name: 'Young Eagles early bird',
+          discountType: 'percentage',
+          discountValue: 50,
+          discountAmount: 200,
+          finalAmount: 200,
+          remaining: 12,
+          maxRedemptions: 40,
+          startDate: '2026-01-01',
+          endDate: '2026-12-31',
+          autoApply: true,
+        }}
+      />,
+    );
+
+    expect(screen.getByLabelText('EAGLES50 registration campaign')).toBeVisible();
+    expect(screen.getByText('EAGLES50')).toBeVisible();
+    expect(screen.getByText('50% OFF')).toBeVisible();
+    expect(screen.getByText('R400.00')).toBeVisible();
+    expect(screen.getByText('R200.00')).toBeVisible();
+    expect(screen.queryByText('2026(FEB)')).not.toBeInTheDocument();
+    expect(screen.queryByText('R350.00')).not.toBeInTheDocument();
   });
 });

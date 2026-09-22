@@ -1,16 +1,10 @@
 'use client';
 
-import {
-  CalendarDays,
-  CheckCircle2,
-  CircleHelp,
-  ClipboardCheck,
-  HeartHandshake,
-  ShieldCheck,
-} from 'lucide-react';
+import { CalendarDays, CheckCircle2, CircleHelp, HeartHandshake, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import { useState } from 'react';
 
+import type { RegistrationCampaignView } from '@/lib/registration-campaign';
 import type { YoungEagles2027RegistrationState } from '@/lib/young-eagles-2027-registration';
 import {
   formatSelectedDocument,
@@ -20,8 +14,10 @@ import {
   YOUNG_EAGLES_2027_DOCUMENT_SLOTS,
 } from '@/lib/young-eagles-2027-registration';
 
+import { RegistrationCampaignBanner } from './RegistrationCampaignBanner';
 import { DocumentsAndConsent } from './YoungEagles2027DocumentsConsent';
 import { ChildDetails, FamilyDetails } from './YoungEagles2027FamilyChildSteps';
+import { YoungEagles2027FeeSchedule } from './YoungEagles2027FeeSchedule';
 import { StepHeading } from './youngEagles2027PreviewUi';
 
 const steps = [
@@ -33,11 +29,14 @@ const steps = [
 
 const previewConfiguration = {
   applicationTiming: 'To be confirmed before launch',
-  feesAndPayments: 'To be confirmed before launch',
   placementAvailability: 'To be confirmed before launch',
 } as const;
 
-export function YoungEagles2027RegistrationPreview() {
+export function YoungEagles2027RegistrationPreview({
+  activeCampaign = null,
+}: {
+  activeCampaign?: RegistrationCampaignView | null;
+}) {
   const [activeStep, setActiveStep] = useState(0);
   const [values, setValues] = useState<YoungEagles2027RegistrationState>(
     initialYoungEagles2027RegistrationState,
@@ -131,6 +130,10 @@ export function YoungEagles2027RegistrationPreview() {
                 admissions are open.
               </p>
             </div>
+
+            {activeCampaign ? <RegistrationCampaignBanner campaign={activeCampaign} /> : null}
+
+            <YoungEagles2027FeeSchedule />
 
             <section
               aria-label="2027 registration application preview"
@@ -256,14 +259,9 @@ export function YoungEagles2027RegistrationPreview() {
                   label="Early learning & daycare"
                   value={previewConfiguration.placementAvailability}
                 />
-                <SummaryItem
-                  icon={<ClipboardCheck />}
-                  label="Fees and payment"
-                  value={previewConfiguration.feesAndPayments}
-                />
               </dl>
               <p className="mt-5 border-t border-[#e7e1fb] pt-4 text-xs leading-5 text-[#756c95]">
-                No 2027 dates, fees, discounts, or payment deadlines are confirmed in this preview.
+                Application dates remain to be confirmed.
               </p>
             </section>
 

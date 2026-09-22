@@ -1,10 +1,28 @@
 'use client';
 
 import { AlertCircle, Check, Loader2, MapPin } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
-import {getFieldLabels, getFormSections } from '@/lib/registration-helpers';
+import { RegistrationCampaignBanner } from '@/components/registration/RegistrationCampaignBanner';
+import {
+  loadActiveRegistrationCampaign,
+  loadRegistrationCampaignByCode,
+  loadSiblingRegistrationCampaign,
+} from '@/lib/load-registration-campaign';
+import {
+  buildRegistrationCampaignPersistFields,
+  type RegistrationCampaignView,
+  resolveDisplayedRegistrationCampaign,
+} from '@/lib/registration-campaign';
+import { getFieldLabels, getFormSections } from '@/lib/registration-helpers';
 import { supabase } from '@/lib/supabase';
+import {
+  formatYoungEaglesRand,
+  formatYoungEaglesRandWithCents,
+  YOUNG_EAGLES_AFTERCARE_FEE,
+  YOUNG_EAGLES_MONTHLY_FEES,
+  YOUNG_EAGLES_REGISTRATION_FEE_RAND,
+} from '@/lib/young-eagles-fees';
 
 interface NearbySchool {
   id: string;
@@ -21,6 +39,7 @@ interface PublicRegistrationFormProps {
   schoolName?: string;
   slug?: string;
   initialBranding?: OrganizationBranding | null;
+  initialCampaign?: RegistrationCampaignView | null;
 }
 
 export interface OrganizationBranding {
@@ -113,6 +132,7 @@ export function PublicRegistrationForm({
   schoolName = 'Our School',
   slug,
   initialBranding = null,
+  initialCampaign = null,
 }: PublicRegistrationFormProps) {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -120,26 +140,12 @@ export function PublicRegistrationForm({
   const [formData, setFormData] = useState(getInitialFormState());
   const [nearbySchools, setNearbySchools] = useState<NearbySchool[]>([]);
   const [showNearbySchools, setShowNearbySchools] = useState(false);
-  const [campaignInfo, setCampaignInfo] = useState<{
-    valid: boolean;
-    discountValue: number;
-    discountType: string;
-    discountAmount: number;
-    remaining: number;
-    maxRedemptions: number;
-    code: string;
-  } | null>(null);
-  const [submittedWithDiscount, setSubmittedWithDiscount] = useState<{
-    valid: boolean;
-    discountValue: number;
-    discountType: string;
-    discountAmount: number;
-    remaining: number;
-    maxRedemptions: number;
-    code: string;
-  } | null>(null);
+  const [campaignInfo, setCampaignInfo] = useState<RegistrationCampaignView | null>(null);
+  const [submittedWithDiscount, setSubmittedWithDiscount] = useState<RegistrationCampaignView | null>(null);
   const [validatingCoupon, setValidatingCoupon] = useState(false);
-  const [liveSpots, setLiveSpots] = useState<number | null>(null);
+  const [activeCampaign, setActiveCampaign] = useState<RegistrationCampaignView | null>(initialCampaign);
+  const [siblingCampaign, setSiblingCampaign] = useState<RegistrationCampaignView | null>(null);
+  const autoFilledCampaignCode = useRef(false);
   const [emailValidation, setEmailValidation] = useState<{
     checking: boolean;
     exists: boolean;
@@ -189,40 +195,47 @@ export function PublicRegistrationForm({
     return requiredTextFields.every((field) => field && field.trim() !== '') && formData.termsAccepted === true;
   };
 
-  // Fetch live spots remaining for Young Eagles promo
   useEffect(() => {
-    const fetchLiveSpots = async () => {
-      if (organizationId !== 'ba79097c-1b93-4b48-bcbe-df73878ab4d1') return;
-      
-      try {
-        const { data, error } = await supabase
-          .from('marketing_campaigns')
-          .select('current_redemptions, max_redemptions')
-          .eq('organization_id', organizationId)
-          .or('coupon_code.eq.2026(FEB),promo_code.eq.2026(FEB),coupon_code.eq.WELCOME2026,promo_code.eq.WELCOME2026')
-          .eq('active', true)
-          .maybeSingle();
-
-        if (!error && data) {
-          const remaining = data.max_redemptions - data.current_redemptions;
-          setLiveSpots(remaining > 0 ? remaining : 0);
-        } else if (error) {
-          // Silently handle RLS/table access errors - use default value
-          // This prevents 406 errors from flooding the console
-          setLiveSpots(40); // Default fallback value
-        }
-      } catch (err) {
-        // Silently use fallback value on any error
-        setLiveSpots(40);
+    const fetchActiveCampaign = async () => {
+      if (!organizationId) {
+        setActiveCampaign(null);
+        setSiblingCampaign(null);
+        return;
       }
+      const [campaign, sibling] = await Promise.all([
+        loadActiveRegistrationCampaign(supabase, organizationId),
+        loadSiblingRegistrationCampaign(supabase, organizationId),
+      ]);
+      setActiveCampaign(campaign);
+      setSiblingCampaign(sibling);
     };
 
-    fetchLiveSpots();
-    
-    // Only poll if initial fetch succeeded, otherwise keep fallback
-    const interval = setInterval(fetchLiveSpots, 30000); // Reduced frequency to 30s
-    return () => clearInterval(interval);
+    void fetchActiveCampaign();
   }, [organizationId]);
+
+  useEffect(() => {
+    if (formData.siblingEnrolled) return;
+    if (autoFilledCampaignCode.current || !activeCampaign?.code) return;
+    autoFilledCampaignCode.current = true;
+    setFormData((prev) => (prev.couponCode ? prev : { ...prev, couponCode: activeCampaign.code }));
+  }, [activeCampaign, formData.siblingEnrolled]);
+
+  useEffect(() => {
+    if (formData.siblingEnrolled) {
+      if (!siblingCampaign?.code) return;
+      setFormData((prev) => (
+        prev.couponCode === siblingCampaign.code ? prev : { ...prev, couponCode: siblingCampaign.code }
+      ));
+      return;
+    }
+
+    setFormData((prev) => {
+      if (siblingCampaign?.code && prev.couponCode === siblingCampaign.code) {
+        return { ...prev, couponCode: activeCampaign?.code ?? '' };
+      }
+      return prev;
+    });
+  }, [formData.siblingEnrolled, siblingCampaign, activeCampaign]);
 
   // Validate email for duplicates in real-time
   useEffect(() => {
@@ -279,11 +292,10 @@ export function PublicRegistrationForm({
     return () => clearTimeout(timer);
   }, [formData.guardianEmail, organizationId]);
 
-  // Validate coupon code in real-time
   useEffect(() => {
     const validateCoupon = async () => {
       const code = formData.couponCode.trim().toUpperCase();
-      
+
       if (!code) {
         setCampaignInfo(null);
         return;
@@ -291,55 +303,9 @@ export function PublicRegistrationForm({
 
       setValidatingCoupon(true);
       try {
-        const escapedCode = code.replace(/"/g, '\\"');
-        const { data: campaign, error } = await supabase
-          .from('marketing_campaigns')
-          .select('id, promo_code, coupon_code, discount_type, discount_percentage, discount_amount, discount_value, current_redemptions, max_redemptions, active, start_date, end_date')
-          .eq('organization_id', organizationId)
-          .or(`coupon_code.eq."${escapedCode}",promo_code.eq."${escapedCode}"`)
-          .eq('active', true)
-          .maybeSingle();
-
-        if (!error && campaign) {
-          const now = new Date();
-          const startDate = campaign.start_date ? new Date(campaign.start_date) : null;
-          const endDate = campaign.end_date ? new Date(campaign.end_date) : null;
-          const isWithinDateWindow =
-            (!startDate || startDate <= now) &&
-            (!endDate || endDate >= now);
-
-          if (!isWithinDateWindow) {
-            setCampaignInfo(null);
-            return;
-          }
-
-          const baseFee = 400; // R400 base registration fee
-          const hasMaxRedemptions = campaign.max_redemptions != null;
-          const remaining = hasMaxRedemptions
-            ? Math.max(0, (campaign.max_redemptions ?? 0) - (campaign.current_redemptions ?? 0))
-            : 0;
-          const hasSlots = !hasMaxRedemptions || remaining > 0;
-          const pct = campaign.discount_percentage ?? campaign.discount_value;
-          const fixedAmt = campaign.discount_amount ?? campaign.discount_value;
-          const isPct = campaign.discount_type === 'percentage' || (campaign.discount_type !== 'fixed' && pct != null);
-          const discountValue = isPct ? (pct ?? 0) : (fixedAmt ?? 0);
-          const discountAmount = isPct
-            ? Math.round(baseFee * (discountValue / 100))
-            : (fixedAmt ?? 0);
-          setCampaignInfo({
-            valid: hasSlots,
-            discountValue,
-            discountType: isPct ? 'percentage' : (campaign.discount_type || 'fixed_amount'),
-            discountAmount,
-            remaining,
-            maxRedemptions: campaign.max_redemptions ?? 0,
-            code: campaign.promo_code || campaign.coupon_code || code
-          });
-        } else {
-          setCampaignInfo(null);
-        }
-      } catch (err) {
-        console.error('Error validating coupon:', err);
+        const campaign = await loadRegistrationCampaignByCode(supabase, organizationId, code);
+        setCampaignInfo(campaign);
+      } catch {
         setCampaignInfo(null);
       } finally {
         setValidatingCoupon(false);
@@ -494,67 +460,34 @@ export function PublicRegistrationForm({
     setLoading(true);
 
     try {
-      // Validate and apply coupon code if provided
-      let campaignId = null;
-      let discountAmount = 0;
-      const baseRegistrationFee = 400; // R400 base fee for Young Eagles
-      let finalAmount = baseRegistrationFee;
-      
-      if (formData.couponCode.trim()) {
-        const codeUpper = formData.couponCode.trim().toUpperCase();
-        const escapedCode = codeUpper.replace(/"/g, '\\"');
-        const { data: campaign, error: campaignError } = await supabase
-          .from('marketing_campaigns')
-          .select('id, discount_type, discount_percentage, discount_amount, discount_value, current_redemptions, max_redemptions, start_date, end_date')
-          .eq('organization_id', organizationId)
-          .or(`coupon_code.eq."${escapedCode}",promo_code.eq."${escapedCode}"`)
-          .eq('active', true)
-          .maybeSingle();
-
-        if (campaignError) {
-          console.error('Error validating coupon:', campaignError);
-        } else if (campaign) {
-          const now = new Date();
-          const startDate = campaign.start_date ? new Date(campaign.start_date) : null;
-          const endDate = campaign.end_date ? new Date(campaign.end_date) : null;
-          const isWithinDateWindow =
-            (!startDate || startDate <= now) &&
-            (!endDate || endDate >= now);
-
-          if (!isWithinDateWindow) {
-            alert('Invalid or expired coupon code. Registration will proceed at full price (R400).');
-          } else {
-          // Check if promo still has slots
-          const hasMaxRedemptions = campaign.max_redemptions != null;
-          const remaining = hasMaxRedemptions
-            ? Math.max(0, (campaign.max_redemptions ?? 0) - (campaign.current_redemptions ?? 0))
-            : 0;
-          if (!hasMaxRedemptions || remaining > 0) {
-            campaignId = campaign.id;
-            // Calculate discount: always use baseRegistrationFee (R400) - never a derived/reduced base
-            const pct = campaign.discount_percentage ?? campaign.discount_value;
-            const fixedAmt = campaign.discount_amount ?? campaign.discount_value;
-            const isFixed = campaign.discount_type === 'fixed' || campaign.discount_type === 'fixed_amount';
-            const isPercentage = campaign.discount_type === 'percentage' || (!isFixed && pct != null);
-            if (isPercentage && pct != null) {
-              const discountRand = baseRegistrationFee * (pct / 100);
-              discountAmount = Math.round(discountRand);
-              finalAmount = Math.max(0, baseRegistrationFee - discountRand);
-            } else if (isFixed && fixedAmt != null && fixedAmt > 0) {
-              discountAmount = fixedAmt;
-              finalAmount = Math.max(0, baseRegistrationFee - fixedAmt);
-            }
-          } else {
-            alert('Sorry, all discount slots have been claimed. Registration will proceed at full price (R400).');
-          }
-          }
-        } else if (formData.couponCode.trim()) {
-          alert('Invalid or expired coupon code. Registration will proceed at full price (R400).');
+      let appliedCampaign: RegistrationCampaignView | null = null;
+      if (formData.siblingEnrolled) {
+        appliedCampaign = await loadSiblingRegistrationCampaign(supabase, organizationId);
+      }
+      if (!appliedCampaign && formData.couponCode.trim()) {
+        appliedCampaign = await loadRegistrationCampaignByCode(
+          supabase,
+          organizationId,
+          formData.couponCode,
+        );
+        if (!appliedCampaign && !formData.siblingEnrolled) {
+          alert(
+            `Invalid, expired, or exhausted coupon code. Registration will proceed at full price (${formatYoungEaglesRandWithCents(YOUNG_EAGLES_REGISTRATION_FEE_RAND)}).`,
+          );
         }
       }
 
+      const persistFields = buildRegistrationCampaignPersistFields({
+        campaign: appliedCampaign,
+        typedCode: appliedCampaign?.code || formData.couponCode,
+        baseFeeRand: YOUNG_EAGLES_REGISTRATION_FEE_RAND,
+      });
+      const discountAmount = persistFields.discount_amount;
+      const finalAmount = persistFields.registration_fee_amount;
+
       // Prepare additional data as JSONB
       const additionalData = {
+        campaign: persistFields.campaign_snapshot,
         guardian_employer: formData.guardianEmployer,
         guardian_work_phone: formData.guardianWorkPhone,
         secondary_guardian: formData.secondaryGuardianName ? {
@@ -709,7 +642,7 @@ export function PublicRegistrationForm({
           reason_for_transfer: formData.reasonForTransfer,
           special_requests: formData.specialRequests,
           how_did_you_hear: formData.howDidYouHear,
-          coupon_code: formData.couponCode,
+          coupon_code: persistFields.coupon_code,
           sibling_enrolled: formData.siblingEnrolled,
           sibling_student_id: formData.siblingStudentId || null,
           // Preschool-Specific
@@ -735,9 +668,9 @@ export function PublicRegistrationForm({
           terms_accepted: formData.termsAccepted,
           photo_id_required: formData.photoIDRequired,
           // System Fields
-          campaign_applied: campaignId || null,
-          discount_amount: discountAmount,
-          registration_fee_amount: finalAmount,
+          campaign_applied: persistFields.campaign_applied,
+          discount_amount: persistFields.discount_amount,
+          registration_fee_amount: persistFields.registration_fee_amount,
           registration_fee_paid: false,
           academic_year: '2026',
           status: 'pending',
@@ -754,8 +687,8 @@ export function PublicRegistrationForm({
       // Payment reference is already set in the initial insert
 
       // Store campaign info before resetting form
-      if (campaignInfo && campaignInfo.valid) {
-        setSubmittedWithDiscount(campaignInfo);
+      if (appliedCampaign) {
+        setSubmittedWithDiscount(appliedCampaign);
       }
 
       // Send confirmation email to parent
@@ -817,7 +750,7 @@ export function PublicRegistrationForm({
             </h3>
             <div className="space-y-2 text-sm text-blue-800 dark:text-blue-300">
               <p className="font-medium">
-                Registration Fee: <span className="text-lg font-bold">R{submittedWithDiscount ? '200.00' : '400.00'}</span>
+                Registration Fee: <span className="text-lg font-bold">{formatYoungEaglesRandWithCents(submittedWithDiscount ? submittedWithDiscount.finalAmount : YOUNG_EAGLES_REGISTRATION_FEE_RAND)}</span>
               </p>
               {submittedWithDiscount && (
                 <p className="text-green-700 dark:text-green-400">
@@ -947,40 +880,23 @@ export function PublicRegistrationForm({
     );
   }
 
-  // Main registration form
+  const displayedCampaign = resolveDisplayedRegistrationCampaign({
+    siblingEnrolled: formData.siblingEnrolled,
+    siblingCampaign,
+    typedCampaign: campaignInfo,
+    autoCampaign: activeCampaign,
+  });
+
   return (
     <form
       onSubmit={handleSubmit}
       className="mx-auto max-w-3xl rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
-      {/* Promo Code & Discount Banner - Top of Page (Young Eagles) */}
-      {organizationId === 'ba79097c-1b93-4b48-bcbe-df73878ab4d1' && (
-        <div className="-mt-2 -mx-2 mb-6 overflow-hidden rounded-xl border-2 border-purple-500 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 p-1 shadow-lg">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 rounded-lg bg-white px-5 py-4 dark:bg-gray-800">
-            <div className="flex items-center gap-3">
-              <div className="rounded-lg bg-purple-100 dark:bg-purple-900/50 px-4 py-2">
-                <p className="text-xs font-semibold uppercase tracking-wider text-purple-600 dark:text-purple-400">Promo Code</p>
-                <p className="text-xl sm:text-2xl font-bold text-purple-700 dark:text-purple-300 font-mono">2026(FEB)</p>
-              </div>
-              <div className="border-l border-gray-200 dark:border-gray-600 pl-4">
-                <p className="text-xs text-gray-500 dark:text-gray-400">Registration fee</p>
-                <p className="text-lg font-bold">
-                  <span className="line-through text-gray-400 dark:text-gray-500">R400.00</span>
-                  <span className="mx-2 text-green-600 dark:text-green-400">→</span>
-                  <span className="text-green-600 dark:text-green-500">R200.00</span>
-                </p>
-                <p className="text-xs font-medium text-purple-600 dark:text-purple-400">50% OFF</p>
-              </div>
-            </div>
-            {liveSpots !== null && liveSpots > 0 && (
-              <span className={`rounded-full px-4 py-2 text-sm font-bold text-white ${
-                liveSpots <= 10 ? 'bg-red-600' : liveSpots <= 25 ? 'bg-orange-500' : 'bg-purple-600'
-              }`}>
-                {liveSpots} spots left
-              </span>
-            )}
-          </div>
-        </div>
-      )}
+      {displayedCampaign ? (
+        <RegistrationCampaignBanner
+          campaign={displayedCampaign}
+          baseFeeRand={YOUNG_EAGLES_REGISTRATION_FEE_RAND}
+        />
+      ) : null}
 
       {/* Organization Branding Header */}
       {organizationBranding && (
@@ -1020,55 +936,6 @@ export function PublicRegistrationForm({
         </div>
       )}
 
-      {/* Limited Time Offer Banner */}
-      {organizationId === 'ba79097c-1b93-4b48-bcbe-df73878ab4d1' && (
-        <div className="mb-6 overflow-hidden rounded-lg border-2 border-purple-400 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 p-1 shadow-xl">
-          <div className="rounded-md bg-white p-5 dark:bg-gray-800">
-            <div className="w-full">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="rounded-full bg-gradient-to-r from-purple-600 to-pink-600 p-2">
-                    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                    </svg>
-                  </div>
-                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white">
-                    🎉 Limited Time Offer!
-                  </h3>
-                </div>
-                {liveSpots !== null && (
-                  <span className={`animate-pulse rounded-full px-3 py-1 text-xs font-bold text-white ${
-                    liveSpots <= 10 ? 'bg-red-600' : liveSpots <= 25 ? 'bg-orange-500' : 'bg-red-500'
-                  }`}>
-                    {liveSpots > 0 ? `${liveSpots} SPOTS LEFT` : 'SOLD OUT'}
-                  </span>
-                )}
-              </div>
-              <p className="mb-3 text-sm sm:text-base text-gray-700 dark:text-gray-300">
-                <span className="font-bold text-red-600">Registration fee: <span className="line-through">R400.00</span> → <span className="text-green-600">R200.00</span></span><br />
-                Be one of the first 50 families to register and get <strong className="text-purple-600 dark:text-purple-400">50% OFF</strong> your registration fee!
-              </p>
-                <div className="rounded-lg bg-gradient-to-r from-purple-100 to-pink-100 p-3 dark:from-purple-900/30 dark:to-pink-900/30">
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                    <div className="w-full">
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                        Use code: <span className="font-mono text-base sm:text-lg text-purple-600 dark:text-purple-400">2026(FEB)</span>
-                      </p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">
-                        Valid for February 2026 registrations
-                      </p>
-                    </div>
-                    <div className="text-left sm:text-right">
-                      <p className="text-xl sm:text-2xl font-bold text-purple-600 dark:text-purple-400">50% OFF</p>
-                      <p className="text-xs text-gray-600 dark:text-gray-400">Registration Fee</p>
-                    </div>
-                  </div>
-                </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Monthly Fee Structure Banner */}
       <div className="mb-6 overflow-hidden rounded-xl border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 shadow-lg dark:border-purple-700 dark:from-purple-900/20 dark:to-pink-900/20">
         <div className="px-4 py-5 sm:p-6">
@@ -1081,31 +948,28 @@ export function PublicRegistrationForm({
             </h3>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {YOUNG_EAGLES_MONTHLY_FEES.map((tier) => (
+              <div
+                className="rounded-lg bg-white dark:bg-gray-800 p-4 shadow-sm border border-purple-100 dark:border-purple-800"
+                key={tier.id}
+              >
+                <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-1">
+                  {tier.label}
+                </p>
+                <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  {formatYoungEaglesRand(tier.amountRand)}
+                  <span className="text-sm font-normal text-gray-500">/month</span>
+                </p>
+              </div>
+            ))}
             <div className="rounded-lg bg-white dark:bg-gray-800 p-4 shadow-sm border border-purple-100 dark:border-purple-800">
               <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-1">
-                6 months - 1 year
+                {YOUNG_EAGLES_AFTERCARE_FEE.label}
               </p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                R850<span className="text-sm font-normal text-gray-500">/month</span>
-              </p>
-            </div>
-            
-            <div className="rounded-lg bg-white dark:bg-gray-800 p-4 shadow-sm border border-purple-100 dark:border-purple-800">
-              <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-1">
-                1 - 3 years
-              </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                R720<span className="text-sm font-normal text-gray-500">/month</span>
-              </p>
-            </div>
-            
-            <div className="rounded-lg bg-white dark:bg-gray-800 p-4 shadow-sm border border-purple-100 dark:border-purple-800">
-              <p className="text-xs font-semibold text-purple-600 dark:text-purple-400 uppercase tracking-wide mb-1">
-                4 - 6 years
-              </p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                R680<span className="text-sm font-normal text-gray-500">/month</span>
+                {formatYoungEaglesRandWithCents(YOUNG_EAGLES_AFTERCARE_FEE.amountRand)}
+                <span className="text-sm font-normal text-gray-500">/month</span>
               </p>
             </div>
           </div>
@@ -2066,36 +1930,31 @@ export function PublicRegistrationForm({
             
             {/* Promo Code Status Display */}
             {campaignInfo && (
-              <div className={`mt-2 rounded-lg border p-3 ${
-                campaignInfo.valid 
-                  ? 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-900/20' 
-                  : 'border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-900/20'
-              }`}>
-                {campaignInfo.valid ? (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
-                      <span className="text-sm font-semibold text-green-700 dark:text-green-300">
-                        {campaignInfo.discountValue}% Discount Applied!
-                      </span>
-                    </div>
+              <div className="mt-2 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-900/20">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Check className="h-4 w-4 text-green-600 dark:text-green-400" />
+                    <span className="text-sm font-semibold text-green-700 dark:text-green-300">
+                      {campaignInfo.discountType === 'percentage'
+                        ? `${campaignInfo.discountValue}% discount applied`
+                        : campaignInfo.discountType === 'waive_registration'
+                          ? 'Registration fee waived'
+                          : `${formatYoungEaglesRandWithCents(campaignInfo.discountAmount)} discount applied`}
+                      : {formatYoungEaglesRandWithCents(YOUNG_EAGLES_REGISTRATION_FEE_RAND)} →{' '}
+                      {formatYoungEaglesRandWithCents(campaignInfo.finalAmount)}
+                    </span>
+                  </div>
+                  {campaignInfo.remaining != null && campaignInfo.maxRedemptions != null ? (
                     <div className="flex items-center justify-between text-xs">
                       <span className="text-green-600 dark:text-green-400">
-                        🎉 Only {campaignInfo.remaining} of {campaignInfo.maxRedemptions} spots remaining!
+                        {campaignInfo.remaining} of {campaignInfo.maxRedemptions} spots remaining
                       </span>
                       <span className="rounded-full bg-green-600 px-2 py-0.5 text-xs font-bold text-white">
                         {campaignInfo.remaining} LEFT
                       </span>
                     </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-                    <span className="text-sm text-red-700 dark:text-red-300">
-                      Sorry, all {campaignInfo.maxRedemptions} discount slots have been claimed.
-                    </span>
-                  </div>
-                )}
+                  ) : null}
+                </div>
               </div>
             )}
             
@@ -2112,18 +1971,24 @@ export function PublicRegistrationForm({
           </div>
 
           <div className="md:col-span-2">
-            <label className="flex cursor-pointer items-center gap-2">
+            <label className="flex cursor-pointer items-start gap-2">
               <input
                 type="checkbox"
                 name="siblingEnrolled"
                 checked={formData.siblingEnrolled}
                 onChange={handleChange}
-                className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                className="mt-1 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                aria-describedby="sibling-campaign-help"
               />
               <span className="text-sm text-gray-700 dark:text-gray-300">
                 I have another child already enrolled at this school
               </span>
             </label>
+            <p id="sibling-campaign-help" className="mt-1 ml-6 text-xs text-gray-500 dark:text-gray-400">
+              {siblingCampaign
+                ? `Applies the sibling registration waiver (${formatYoungEaglesRandWithCents(YOUNG_EAGLES_REGISTRATION_FEE_RAND)} → ${formatYoungEaglesRandWithCents(siblingCampaign.finalAmount)}).`
+                : 'We will note that a sibling is enrolled. No sibling fee waiver is currently active.'}
+            </p>
           </div>
 
           {formData.siblingEnrolled && (

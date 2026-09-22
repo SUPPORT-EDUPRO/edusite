@@ -1,3 +1,5 @@
+import type { RegistrationCampaignView } from '@/lib/registration-campaign';
+
 export interface OrganizationBranding {
   id: string;
   name: string;
@@ -34,4 +36,5 @@ export interface PublicRegistrationFormProps {
   schoolName?: string;
   slug?: string;
   initialBranding?: OrganizationBranding | null;
+  initialCampaign?: RegistrationCampaignView | null;
 }
