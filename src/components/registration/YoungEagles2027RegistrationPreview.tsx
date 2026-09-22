@@ -1,24 +1,34 @@
 'use client';
 
-import { CalendarDays, CheckCircle2, CircleHelp, HeartHandshake, ShieldCheck } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
 import Image from 'next/image';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 
-import type { RegistrationCampaignView } from '@/lib/registration-campaign';
-import type { YoungEagles2027RegistrationState } from '@/lib/young-eagles-2027-registration';
+import { persistYoungEagles2027Registration } from '@/lib/persist-young-eagles-2027-registration';
 import {
-  formatSelectedDocument,
+  type RegistrationCampaignView,
+  resolveDisplayedRegistrationCampaign,
+} from '@/lib/registration-campaign';
+import {
   initialYoungEagles2027RegistrationState,
-  mediaPermissionReviewLabel,
   validateYoungEagles2027Step,
-  YOUNG_EAGLES_2027_DOCUMENT_SLOTS,
+  type YoungEagles2027RegistrationState,
 } from '@/lib/young-eagles-2027-registration';
+import {
+  formatYoungEaglesRandWithCents,
+  YOUNG_EAGLES_REGISTRATION_FEE_RAND,
+} from '@/lib/young-eagles-fees';
+import { YOUNG_EAGLES_ORGANIZATION_ID } from '@/lib/young-eagles-registration';
 
 import { RegistrationCampaignBanner } from './RegistrationCampaignBanner';
 import { DocumentsAndConsent } from './YoungEagles2027DocumentsConsent';
 import { ChildDetails, FamilyDetails } from './YoungEagles2027FamilyChildSteps';
 import { YoungEagles2027FeeSchedule } from './YoungEagles2027FeeSchedule';
-import { StepHeading } from './youngEagles2027PreviewUi';
+import {
+  RegistrationInfoAside,
+  ReviewAndSubmit,
+  SubmittedConfirmation,
+} from './YoungEagles2027Review';
 
 const steps = [
   'Family details',
@@ -27,17 +37,22 @@ const steps = [
   'Review & submit',
 ] as const;
 
-const previewConfiguration = {
-  applicationTiming: 'To be confirmed before launch',
-  placementAvailability: 'To be confirmed before launch',
-} as const;
-
 export function YoungEagles2027RegistrationPreview({
   activeCampaign = null,
+  siblingCampaign = null,
+  mode = 'preview',
+  organizationId,
 }: {
   activeCampaign?: RegistrationCampaignView | null;
+  siblingCampaign?: RegistrationCampaignView | null;
+  mode?: 'preview' | 'live';
+  organizationId?: string;
 }) {
+  const persistEnabled = mode === 'live' && organizationId === YOUNG_EAGLES_ORGANIZATION_ID;
   const [activeStep, setActiveStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [values, setValues] = useState<YoungEagles2027RegistrationState>(
     initialYoungEagles2027RegistrationState,
   );
@@ -68,6 +83,21 @@ export function YoungEagles2027RegistrationPreview({
     }
   }
 
+  const displayedCampaign = useMemo(
+    () =>
+      resolveDisplayedRegistrationCampaign({
+        siblingEnrolled: values.siblingEnrolled,
+        siblingCampaign,
+        typedCampaign: null,
+        autoCampaign: activeCampaign,
+      }),
+    [activeCampaign, siblingCampaign, values.siblingEnrolled],
+  );
+
+  const siblingHelp = siblingCampaign
+    ? `Applies the sibling registration waiver (${formatYoungEaglesRandWithCents(YOUNG_EAGLES_REGISTRATION_FEE_RAND)} → ${formatYoungEaglesRandWithCents(siblingCampaign.finalAmount)}).`
+    : 'We will note that a sibling is enrolled. No sibling fee waiver is currently active.';
+
   const isFieldInvalid = (field: keyof YoungEagles2027RegistrationState) =>
     Boolean(validationMessage) &&
     ((activeStep === 0 &&
@@ -85,7 +115,38 @@ export function YoungEagles2027RegistrationPreview({
           'termsConsent',
         ].includes(field)));
 
-  const stepProps = { values, updateField, isFieldInvalid };
+  const stepProps = { values, updateField, isFieldInvalid, siblingHelp };
+
+  async function submitLiveApplication() {
+    const message = validateYoungEagles2027Step(2, values);
+    if (message) {
+      setSubmitError(message);
+      return;
+    }
+    if (!organizationId) return;
+
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      await persistYoungEagles2027Registration(supabase, {
+        organizationId,
+        values,
+        campaign: displayedCampaign,
+      });
+      setSubmitted(true);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : 'Failed to submit registration. Please try again.',
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (submitted) {
+    return <SubmittedConfirmation childLegalName={values.childLegalName} />;
+  }
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#ece8ff,_transparent_34%),linear-gradient(135deg,_#f7faff,_#f6f2ff)] px-3 py-3 text-[#2b3e5c] sm:px-6 sm:py-8">
@@ -109,7 +170,7 @@ export function YoungEagles2027RegistrationPreview({
               aria-hidden="true"
               className="size-2 rounded-full bg-[#7651d6] shadow-[0_0_0_4px_rgba(118,81,214,0.12)]"
             />
-            2027 admissions preview
+            {persistEnabled ? '2027 admissions open' : '2027 admissions preview'}
           </span>
         </header>
 
@@ -126,17 +187,24 @@ export function YoungEagles2027RegistrationPreview({
                 Start your child&apos;s 2027 journey with us.
               </h1>
               <p className="mt-4 max-w-[610px] leading-7 text-[#64748b]">
-                A guided application for families. Review each detail before submitting when live
-                admissions are open.
+                {persistEnabled
+                  ? 'A guided application for families. Review each detail before submitting.'
+                  : 'A guided application for families. Review each detail before submitting when live admissions are open.'}
               </p>
             </div>
 
-            {activeCampaign ? <RegistrationCampaignBanner campaign={activeCampaign} /> : null}
+            {displayedCampaign ? (
+              <RegistrationCampaignBanner campaign={displayedCampaign} />
+            ) : null}
 
             <YoungEagles2027FeeSchedule />
 
             <section
-              aria-label="2027 registration application preview"
+              aria-label={
+                persistEnabled
+                  ? '2027 registration application'
+                  : '2027 registration application preview'
+              }
               className="overflow-hidden rounded-[22px] border border-[#e5ebf4] bg-white shadow-[0_12px_30px_rgba(23,36,61,0.06)]"
             >
               <ol
@@ -189,15 +257,17 @@ export function YoungEagles2027RegistrationPreview({
                 {activeStep === 0 ? <FamilyDetails {...stepProps} /> : null}
                 {activeStep === 1 ? <ChildDetails {...stepProps} /> : null}
                 {activeStep === 2 ? <DocumentsAndConsent {...stepProps} /> : null}
-                {activeStep === 3 ? <ReviewAndSubmit values={values} /> : null}
+                {activeStep === 3 ? (
+                  <ReviewAndSubmit persistEnabled={persistEnabled} values={values} />
+                ) : null}
 
-                {validationMessage ? (
+                {validationMessage || submitError ? (
                   <p
                     aria-live="polite"
                     className="mt-5 rounded-xl border border-[#f2caca] bg-[#fff7f7] px-3 py-2 text-sm text-[#9b3131]"
                     role="alert"
                   >
-                    {validationMessage}
+                    {validationMessage || submitError}
                   </p>
                 ) : null}
 
@@ -210,6 +280,31 @@ export function YoungEagles2027RegistrationPreview({
                       type="button"
                     >
                       Continue to {steps[activeStep + 1]}
+                    </button>
+                  </div>
+                ) : persistEnabled ? (
+                  <div className="mt-6 flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+                    <button
+                      className="text-sm font-bold text-[#1e4b8f] underline decoration-[#b7c9e6] underline-offset-4 focus-visible:ring-4 focus-visible:ring-[#7651d6]/30 focus-visible:outline-none"
+                      onClick={() => moveToStep(2)}
+                      type="button"
+                    >
+                      Back to documents &amp; consent
+                    </button>
+                    <button
+                      className="rounded-xl bg-gradient-to-r from-[#1e4b8f] to-[#7651d6] px-4 py-3 text-sm font-extrabold text-white shadow-[0_8px_16px_rgba(30,75,143,0.2)] transition hover:brightness-110 focus-visible:ring-4 focus-visible:ring-[#7651d6]/30 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+                      disabled={submitting}
+                      onClick={() => void submitLiveApplication()}
+                      type="button"
+                    >
+                      {submitting ? (
+                        <span className="inline-flex items-center gap-2">
+                          <Loader2 aria-hidden="true" className="size-4 animate-spin" />
+                          Submitting
+                        </span>
+                      ) : (
+                        'Submit registration'
+                      )}
                     </button>
                   </div>
                 ) : (
@@ -231,7 +326,7 @@ export function YoungEagles2027RegistrationPreview({
                     </button>
                   </div>
                 )}
-                {activeStep === 3 ? (
+                {activeStep === 3 && !persistEnabled ? (
                   <p id="preview-submit-note" className="mt-3 text-xs text-[#8290a5]">
                     This preview does not send, save, or submit any information.
                   </p>
@@ -240,138 +335,9 @@ export function YoungEagles2027RegistrationPreview({
             </section>
           </section>
 
-          <aside
-            aria-label="2027 registration information"
-            className="grid content-start gap-4 sm:grid-cols-2 lg:grid-cols-1"
-          >
-            <section className="rounded-[20px] border border-[#d9d0fb] bg-gradient-to-br from-[#f8f5ff] to-white p-5">
-              <h2 className="font-extrabold tracking-[-0.015em] text-[#172f56]">
-                2027 admissions at a glance
-              </h2>
-              <dl className="mt-5 grid gap-4">
-                <SummaryItem
-                  icon={<CalendarDays />}
-                  label="Application timing"
-                  value={previewConfiguration.applicationTiming}
-                />
-                <SummaryItem
-                  icon={<HeartHandshake />}
-                  label="Early learning & daycare"
-                  value={previewConfiguration.placementAvailability}
-                />
-              </dl>
-              <p className="mt-5 border-t border-[#e7e1fb] pt-4 text-xs leading-5 text-[#756c95]">
-                Application dates remain to be confirmed.
-              </p>
-            </section>
-
-            <section className="rounded-[20px] border border-[#e5ebf4] bg-white/80 p-5">
-              <h2 className="font-extrabold tracking-[-0.015em] text-[#172f56]">
-                Readiness checklist
-              </h2>
-              <ul className="mt-4 grid gap-3 text-sm leading-5 text-[#64748b]">
-                {[
-                  'Parent or guardian contact details',
-                  'Child details and care notes',
-                  'Upload documents now or later in the app',
-                  'Consent, media permission and final review',
-                ].map((item) => (
-                  <li key={item} className="flex gap-2.5">
-                    <CheckCircle2
-                      aria-hidden="true"
-                      className="mt-0.5 size-4 shrink-0 text-[#238265]"
-                    />
-                    {item}
-                  </li>
-                ))}
-              </ul>
-            </section>
-
-            <section className="flex items-center justify-between gap-4 rounded-2xl bg-[#172f56] p-4 text-white sm:col-span-2 lg:col-span-1">
-              <div>
-                <h2 className="text-sm font-extrabold">Need a hand?</h2>
-                <p className="mt-1 text-xs leading-5 text-[#dce7fa]">
-                  Admissions support details are to be confirmed before launch.
-                </p>
-              </div>
-              <CircleHelp
-                aria-hidden="true"
-                className="size-8 shrink-0 rounded-xl border border-white/25 p-1.5"
-              />
-            </section>
-          </aside>
+          <RegistrationInfoAside persistEnabled={persistEnabled} />
         </div>
       </div>
     </main>
-  );
-}
-
-function ReviewAndSubmit({ values }: { values: YoungEagles2027RegistrationState }) {
-  const documentSummary =
-    values.documentPreference === 'upload-now'
-      ? YOUNG_EAGLES_2027_DOCUMENT_SLOTS.map((slot) => {
-          const selected = values[slot.id];
-          return `${slot.label}: ${selected ? formatSelectedDocument(selected) : 'Not selected'}`;
-        }).join('; ')
-      : values.documentPreference === 'upload-later'
-        ? 'Upload later in the EduDash Pro app'
-        : 'Not provided';
-
-  const rows = [
-    ['Guardian', values.guardianLegalName || 'Not provided'],
-    ['Email', values.email || 'Not provided'],
-    ['Child', values.childLegalName || 'Not provided'],
-    ['Intended start', values.intendedStart || 'Not provided'],
-    ['Care schedule', 'Full-day weekday care'],
-    ['Documents', documentSummary],
-    ['Media permission', mediaPermissionReviewLabel(values.mediaPermission)],
-  ];
-
-  return (
-    <>
-      <StepHeading
-        title="Review your application"
-        helper="Check the details below. Nothing entered here is stored or sent to Young Eagles until live submission is enabled."
-      />
-      <dl className="grid divide-y divide-[#e5ebf4] overflow-hidden rounded-xl border border-[#e5ebf4] bg-[#fbfdff]">
-        {rows.map(([label, value]) => (
-          <div className="grid gap-1 px-4 py-3 sm:grid-cols-[10rem_1fr] sm:gap-4" key={label}>
-            <dt className="text-xs font-extrabold tracking-wide text-[#64748b] uppercase">
-              {label}
-            </dt>
-            <dd className="text-sm text-[#2b3e5c]">{value}</dd>
-          </div>
-        ))}
-      </dl>
-      <div className="mt-4 flex gap-3 rounded-xl border border-[#d9d0fb] bg-[#f8f5ff] p-3 text-sm leading-5 text-[#5d3db3]">
-        <ShieldCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0" />
-        Final submission, fees, and application timing remain unavailable until they are confirmed.
-      </div>
-    </>
-  );
-}
-
-function SummaryItem({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex gap-3">
-      <span
-        aria-hidden="true"
-        className="grid size-7 shrink-0 place-items-center rounded-lg bg-[#edf4fe] text-[#1e4b8f] [&_svg]:size-4"
-      >
-        {icon}
-      </span>
-      <div>
-        <dt className="text-sm font-extrabold text-[#354966]">{label}</dt>
-        <dd className="mt-0.5 text-xs leading-5 text-[#64748b]">{value}</dd>
-      </div>
-    </div>
   );
 }

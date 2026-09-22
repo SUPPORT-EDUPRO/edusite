@@ -52,6 +52,7 @@ export interface YoungEagles2027RegistrationState {
   address: string;
   communicationPreference: string;
   emergencyContact: string;
+  siblingEnrolled: boolean;
   childLegalName: string;
   childPreferredName: string;
   childDateOfBirth: string;
@@ -76,6 +77,7 @@ export const initialYoungEagles2027RegistrationState: YoungEagles2027Registratio
   address: '',
   communicationPreference: '',
   emergencyContact: '',
+  siblingEnrolled: false,
   childLegalName: '',
   childPreferredName: '',
   childDateOfBirth: '',

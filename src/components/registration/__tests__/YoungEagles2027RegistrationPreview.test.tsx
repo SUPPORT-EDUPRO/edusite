@@ -86,6 +86,37 @@ describe('YoungEagles2027RegistrationPreview', () => {
     expect(screen.getByLabelText('Child legal name (required)')).toHaveValue('Amahle Mokoena');
   });
 
+  it('serves the new 2027 form on the live Young Eagles route', () => {
+    const source = fs.readFileSync(
+      path.resolve(process.cwd(), 'src/app/registration/young-eagles/page.tsx'),
+      'utf8',
+    );
+
+    expect(source).toContain('YoungEagles2027RegistrationPreview');
+    expect(source).toContain('mode="live"');
+    expect(source).not.toContain('PublicRegistrationForm');
+  });
+
+  it('lets a family mark a sibling on the first step', () => {
+    render(<YoungEagles2027RegistrationPreview />);
+
+    expect(
+      screen.getByLabelText('I have another child already enrolled at this school'),
+    ).toBeVisible();
+  });
+
+  it('enables 2027 submit on the live form', () => {
+    render(
+      <YoungEagles2027RegistrationPreview
+        mode="live"
+        organizationId="ba79097c-1b93-4b48-bcbe-df73878ab4d1"
+      />,
+    );
+
+    expect(screen.getByText('2027 admissions open')).toBeVisible();
+    expect(screen.getByLabelText('2027 registration application')).toBeVisible();
+  });
+
   it('serves the 2027 registration route instead of redirecting to 2026', () => {
     const source = fs.readFileSync(
       path.resolve(process.cwd(), 'src/app/registration/young-eagles-2027/page.tsx'),

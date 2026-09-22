@@ -9,9 +9,15 @@ export interface YoungEagles2027StepProps {
     value: YoungEagles2027RegistrationState[Key],
   ) => void;
   isFieldInvalid: (field: keyof YoungEagles2027RegistrationState) => boolean;
+  siblingHelp?: string;
 }
 
-export function FamilyDetails({ values, updateField, isFieldInvalid }: YoungEagles2027StepProps) {
+export function FamilyDetails({
+  values,
+  updateField,
+  isFieldInvalid,
+  siblingHelp = 'We will note that a sibling is enrolled. No sibling fee waiver is currently active.',
+}: YoungEagles2027StepProps) {
   return (
     <>
       <StepHeading
@@ -109,6 +115,22 @@ export function FamilyDetails({ values, updateField, isFieldInvalid }: YoungEagl
             value={values.emergencyContact}
           />
         </Field>
+        <div className="sm:col-span-2">
+          <label className="flex cursor-pointer items-start gap-3 text-sm font-semibold text-[#2b3e5c]">
+            <input
+              aria-describedby="sibling-campaign-help"
+              checked={values.siblingEnrolled}
+              className="mt-1 size-4 rounded border-[#cbd7e7] text-[#7651d6]"
+              name="siblingEnrolled"
+              onChange={(event) => updateField('siblingEnrolled', event.target.checked)}
+              type="checkbox"
+            />
+            <span>I have another child already enrolled at this school</span>
+          </label>
+          <p className="mt-1 ml-7 text-xs font-normal text-[#64748b]" id="sibling-campaign-help">
+            {siblingHelp}
+          </p>
+        </div>
       </div>
     </>
   );

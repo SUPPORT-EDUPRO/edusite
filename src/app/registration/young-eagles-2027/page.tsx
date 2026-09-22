@@ -1,7 +1,10 @@
 import type { Metadata } from 'next';
 
 import { YoungEagles2027RegistrationPreview } from '@/components/registration/YoungEagles2027RegistrationPreview';
-import { loadActiveRegistrationCampaign } from '@/lib/load-registration-campaign';
+import {
+  loadActiveRegistrationCampaign,
+  loadSiblingRegistrationCampaign,
+} from '@/lib/load-registration-campaign';
 import { supabase } from '@/lib/supabase';
 import { YOUNG_EAGLES_ORGANIZATION_ID } from '@/lib/young-eagles-registration';
 
@@ -11,10 +14,15 @@ export const metadata: Metadata = {
 };
 
 export default async function YoungEagles2027RegistrationPage() {
-  const activeCampaign = await loadActiveRegistrationCampaign(
-    supabase,
-    YOUNG_EAGLES_ORGANIZATION_ID,
-  );
+  const [activeCampaign, siblingCampaign] = await Promise.all([
+    loadActiveRegistrationCampaign(supabase, YOUNG_EAGLES_ORGANIZATION_ID),
+    loadSiblingRegistrationCampaign(supabase, YOUNG_EAGLES_ORGANIZATION_ID),
+  ]);
 
-  return <YoungEagles2027RegistrationPreview activeCampaign={activeCampaign} />;
+  return (
+    <YoungEagles2027RegistrationPreview
+      activeCampaign={activeCampaign}
+      siblingCampaign={siblingCampaign}
+    />
+  );
 }
