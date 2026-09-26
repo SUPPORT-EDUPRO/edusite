@@ -1,6 +1,7 @@
 import { CURRENT_ACADEMIC_YEAR, defaultPreferredStartDate } from '@/lib/academic-year';
 import {
   buildYoungEagles2027RegistrationRow,
+  persistYoungEagles2027Registration,
   splitPersonName,
 } from '@/lib/persist-young-eagles-2027-registration';
 import { initialYoungEagles2027RegistrationState } from '@/lib/young-eagles-2027-registration';
@@ -77,5 +78,53 @@ describe('persistYoungEagles2027Registration', () => {
         campaign: null,
       }),
     ).toThrow('Young Eagles registration can only be submitted for Young Eagles Preschool.');
+  });
+
+  it('persists a pending row and rejects a duplicate child', async () => {
+    let inserted: Record<string, unknown> | null = null;
+    const client = {
+      from() {
+        return {
+          select() {
+            return this;
+          },
+          eq() {
+            return this;
+          },
+          async maybeSingle() {
+            return { data: inserted ? { id: 'existing', status: 'pending' } : null };
+          },
+          insert(row: Record<string, unknown>) {
+            inserted = row;
+            return {
+              select() {
+                return this;
+              },
+              async single() {
+                return { data: { id: 'reg-1' }, error: null };
+              },
+            };
+          },
+        };
+      },
+    };
+
+    const first = await persistYoungEagles2027Registration(client, {
+      organizationId: YOUNG_EAGLES_ORGANIZATION_ID,
+      values,
+      campaign: null,
+    });
+    expect(first.id).toBe('reg-1');
+    expect(inserted?.academic_year).toBe(CURRENT_ACADEMIC_YEAR);
+    expect(inserted?.organization_id).toBe(YOUNG_EAGLES_ORGANIZATION_ID);
+    expect(inserted?.status).toBe('pending');
+
+    await expect(
+      persistYoungEagles2027Registration(client, {
+        organizationId: YOUNG_EAGLES_ORGANIZATION_ID,
+        values,
+        campaign: null,
+      }),
+    ).rejects.toThrow('already exists');
   });
 });

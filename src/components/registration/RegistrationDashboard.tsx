@@ -15,6 +15,7 @@ import {
   XCircle} from 'lucide-react';
 import { useEffect,useState } from 'react';
 
+import { CURRENT_ACADEMIC_YEAR } from '@/lib/academic-year';
 import { supabase } from '@/lib/supabase';
 
 interface RegistrationRequest {
@@ -190,7 +191,7 @@ export function RegistrationDashboard({ organizationId }: RegistrationDashboardP
           Registration Requests
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          Manage student registration applications for 2026 academic year
+          Manage student registration applications for {CURRENT_ACADEMIC_YEAR} academic year
         </p>
       </div>
 

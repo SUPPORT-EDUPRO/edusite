@@ -14,6 +14,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 
+import { CURRENT_ACADEMIC_YEAR } from '@/lib/academic-year';
+
 interface Campaign {
   id: string;
   name: string;
@@ -299,7 +301,7 @@ export default function OrganizationLandingPage({
 
             <div className="bg-white rounded-2xl shadow-xl p-8">
               <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                All Fees for 2026
+                All Fees for {CURRENT_ACADEMIC_YEAR}
               </h3>
               
               <div className="space-y-4">
@@ -335,7 +337,7 @@ export default function OrganizationLandingPage({
             Ready to Join {organization.name}?
           </h2>
           <p className="text-xl mb-8 text-blue-100">
-            Secure your child's spot for the 2026 academic year today.
+            Secure your child&apos;s spot for the {CURRENT_ACADEMIC_YEAR} academic year today.
           </p>
           
           <Link

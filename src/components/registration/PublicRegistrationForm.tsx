@@ -15,6 +15,7 @@ import {
   resolveDisplayedRegistrationCampaign,
 } from '@/lib/registration-campaign';
 import { getFieldLabels, getFormSections } from '@/lib/registration-helpers';
+import { CURRENT_ACADEMIC_YEAR, defaultPreferredStartDate } from '@/lib/academic-year';
 import { supabase } from '@/lib/supabase';
 import {
   formatYoungEaglesRand,
@@ -83,7 +84,7 @@ const getInitialFormState = () => ({
   studentDietaryRequirements: '',
   doctorName: '',
   doctorPhone: '',
-  preferredStartDate: '2026-01-12',
+  preferredStartDate: defaultPreferredStartDate(),
   previousSchool: '',
   reasonForTransfer: '',
   specialRequests: '',
@@ -672,7 +673,7 @@ export function PublicRegistrationForm({
           discount_amount: persistFields.discount_amount,
           registration_fee_amount: persistFields.registration_fee_amount,
           registration_fee_paid: false,
-          academic_year: '2026',
+          academic_year: CURRENT_ACADEMIC_YEAR,
           status: 'pending',
           priority_points: formData.siblingEnrolled ? 5 : 0,
           documents: additionalData,
@@ -742,7 +743,7 @@ export function PublicRegistrationForm({
           </h2>
           <p className="mb-6 text-gray-600 dark:text-gray-300">
             Thank you for registering {formData.studentFirstName} {formData.studentLastName} for the
-            2026 academic year at {schoolName}.
+            {CURRENT_ACADEMIC_YEAR} academic year at {schoolName}.
           </p>
           <div className="mb-6 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
             <h3 className="mb-2 font-semibold text-blue-900 dark:text-blue-200">
@@ -983,10 +984,10 @@ export function PublicRegistrationForm({
 
       <div className="mb-6">
         <h1 className="mb-2 text-3xl font-bold text-gray-900 dark:text-white">
-          {organizationBranding?.organization_type === 'preschool' ? 'Student Registration for 2026' :
-           organizationBranding?.organization_type === 'fet_college' ? 'Student Application 2026' :
-           organizationBranding?.organization_type === 'training_center' ? 'Course Registration 2026' :
-           'Registration 2026'}
+          {organizationBranding?.organization_type === 'preschool' ? `Student Registration for ${CURRENT_ACADEMIC_YEAR}` :
+           organizationBranding?.organization_type === 'fet_college' ? `Student Application ${CURRENT_ACADEMIC_YEAR}` :
+           organizationBranding?.organization_type === 'training_center' ? `Course Registration ${CURRENT_ACADEMIC_YEAR}` :
+           `Registration ${CURRENT_ACADEMIC_YEAR}`}
         </h1>
         <p className="text-gray-600 dark:text-gray-300">
           {schoolName} - School Code: <span className="font-mono font-semibold">{schoolCode}</span>

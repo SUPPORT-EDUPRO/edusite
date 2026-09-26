@@ -92,8 +92,7 @@ describe('YoungEagles2027RegistrationPreview', () => {
       'utf8',
     );
 
-    expect(source).toContain('YoungEagles2027RegistrationPreview');
-    expect(source).toContain('mode="live"');
+    expect(source).toContain('YoungEaglesLiveRegistrationForm');
     expect(source).not.toContain('PublicRegistrationForm');
   });
 
@@ -124,9 +123,13 @@ describe('YoungEagles2027RegistrationPreview', () => {
     );
 
     expect(source).not.toMatch(/\bredirect\s*\(/);
-    expect(source).toContain('YoungEagles2027RegistrationPreview');
-    expect(source).toContain('loadActiveRegistrationCampaign');
-    expect(source).toContain('YOUNG_EAGLES_ORGANIZATION_ID');
+    expect(source).toContain('YoungEaglesLiveRegistrationForm');
+    const liveForm = fs.readFileSync(
+      path.resolve(process.cwd(), 'src/components/registration/YoungEaglesLiveRegistrationForm.tsx'),
+      'utf8',
+    );
+    expect(liveForm).toContain('mode="live"');
+    expect(liveForm).toContain('YOUNG_EAGLES_ORGANIZATION_ID');
   });
 
   it('does not hardcode a 2026(FEB) promo banner on the current public form', () => {

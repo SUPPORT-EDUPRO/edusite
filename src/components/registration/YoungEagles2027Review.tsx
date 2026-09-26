@@ -1,4 +1,11 @@
-import { CalendarDays, Check, CheckCircle2, CircleHelp, HeartHandshake, ShieldCheck } from 'lucide-react';
+import {
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  CircleHelp,
+  HeartHandshake,
+  ShieldCheck,
+} from 'lucide-react';
 
 import type { YoungEagles2027RegistrationState } from '@/lib/young-eagles-2027-registration';
 import {
@@ -103,7 +110,7 @@ export function RegistrationInfoAside({ persistEnabled }: { persistEnabled: bool
           <SummaryItem
             icon={<HeartHandshake />}
             label="Early learning & daycare"
-            value="To be confirmed before launch"
+            value={persistEnabled ? 'Ages 6 months to 6 years' : 'To be confirmed before launch'}
           />
         </dl>
       </section>
@@ -129,7 +136,9 @@ export function RegistrationInfoAside({ persistEnabled }: { persistEnabled: bool
         <div>
           <h2 className="text-sm font-extrabold">Need a hand?</h2>
           <p className="mt-1 text-xs leading-5 text-[#dce7fa]">
-            Admissions support details are to be confirmed before launch.
+            {persistEnabled
+              ? 'Admissions will contact you after this application is submitted. You can also continue from the Young Eagles website.'
+              : 'Admissions support details are to be confirmed before launch.'}
           </p>
         </div>
         <CircleHelp

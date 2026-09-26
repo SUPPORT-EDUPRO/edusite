@@ -22,7 +22,7 @@ export function FamilyDetails({
     <>
       <StepHeading
         title="Tell us about the family"
-        helper="Only fields marked required are needed for an initial application. This preview does not collect ID numbers, employer details, or detailed financial information."
+        helper="Only fields marked required are needed for an initial application. This form does not collect ID numbers, employer details, or detailed financial information."
       />
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Guardian legal name (required)" invalid={isFieldInvalid('guardianLegalName')}>

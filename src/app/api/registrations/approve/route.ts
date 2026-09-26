@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { CURRENT_ACADEMIC_YEAR } from '@/lib/academic-year';
 import { createClient } from '@/lib/auth';
 import { generateParentWelcomeEmail } from '@/lib/email-templates/parent-welcome';
 import { getServiceRoleClient } from '@/lib/supabase';
@@ -146,7 +147,7 @@ export async function POST(request: NextRequest) {
         last_name: registration.student_last_name,
         date_of_birth: registration.student_dob,
         status: 'enrolled',
-        academic_year: '2026',
+        academic_year: registration.academic_year || CURRENT_ACADEMIC_YEAR,
         home_address: registration.guardian_address,
         home_phone: registration.guardian_phone,
       })

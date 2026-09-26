@@ -1,28 +1,12 @@
 import type { Metadata } from 'next';
 
-import { YoungEagles2027RegistrationPreview } from '@/components/registration/YoungEagles2027RegistrationPreview';
-import {
-  loadActiveRegistrationCampaign,
-  loadSiblingRegistrationCampaign,
-} from '@/lib/load-registration-campaign';
-import { supabase } from '@/lib/supabase';
-import { YOUNG_EAGLES_ORGANIZATION_ID } from '@/lib/young-eagles-registration';
+import { YoungEaglesLiveRegistrationForm } from '@/components/registration/YoungEaglesLiveRegistrationForm';
 
 export const metadata: Metadata = {
   title: 'Young Eagles 2027 registration | EduSitePro',
   description: 'Register your child for the 2027 academic year at Young Eagles Preschool.',
 };
 
-export default async function YoungEagles2027RegistrationPage() {
-  const [activeCampaign, siblingCampaign] = await Promise.all([
-    loadActiveRegistrationCampaign(supabase, YOUNG_EAGLES_ORGANIZATION_ID),
-    loadSiblingRegistrationCampaign(supabase, YOUNG_EAGLES_ORGANIZATION_ID),
-  ]);
-
-  return (
-    <YoungEagles2027RegistrationPreview
-      activeCampaign={activeCampaign}
-      siblingCampaign={siblingCampaign}
-    />
-  );
+export default function YoungEagles2027RegistrationPage() {
+  return <YoungEaglesLiveRegistrationForm />;
 }
