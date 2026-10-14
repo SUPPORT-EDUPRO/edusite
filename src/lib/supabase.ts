@@ -5,9 +5,9 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Validate environment variables
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+// Next.js only inlines NEXT_PUBLIC_* vars for static process.env access.
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim() ?? '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim() ?? '';
 
 if (!supabaseUrl) {
   throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL environment variable');
@@ -31,8 +31,7 @@ export function getServiceRoleClient() {
     );
   }
 
-  // supabaseUrl is validated above, safe to use as string
-  return createClient(supabaseUrl!, serviceRoleKey, {
+  return createClient(supabaseUrl, serviceRoleKey.trim(), {
     auth: {
       autoRefreshToken: false,
       persistSession: false,

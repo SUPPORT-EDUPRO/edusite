@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createClient } from '@/lib/auth';
+import {
+  assertCanManageSchool,
+  registrationAuthErrorResponse,
+  requireRegistrationStaff,
+} from '@/lib/registration-staff-auth';
 import { getServiceRoleClient } from '@/lib/supabase';
 
 export async function POST(request: NextRequest) {
@@ -8,22 +12,10 @@ export async function POST(request: NextRequest) {
     const { registrationId, reason } = await request.json();
 
     if (!registrationId) {
-      return NextResponse.json(
-        { error: 'Registration ID is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Registration ID is required' }, { status: 400 });
     }
 
-    // Verify user is authenticated
-    const authClient = createClient();
-    const { data: { session } } = await authClient.auth.getSession();
-
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const staff = await requireRegistrationStaff();
 
     // Use service role client for database operations
     const supabase = getServiceRoleClient();
@@ -36,9 +28,15 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (fetchError || !registration) {
+      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
+    }
+
+    assertCanManageSchool(staff, registration.organization_id);
+
+    if (registration.status === 'approved') {
       return NextResponse.json(
-        { error: 'Registration not found' },
-        { status: 404 }
+        { error: 'An approved registration cannot be rejected.' },
+        { status: 409 },
       );
     }
 
@@ -47,7 +45,12 @@ export async function POST(request: NextRequest) {
       .from('registration_requests')
       .update({
         status: 'rejected',
-        rejection_reason: reason || 'Not specified',
+        rejection_reason:
+          typeof reason === 'string' && reason.trim()
+            ? reason.trim().slice(0, 500)
+            : 'Not specified',
+        reviewed_by: staff.userId,
+        reviewed_date: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       })
       .eq('id', registrationId);
@@ -63,12 +66,10 @@ export async function POST(request: NextRequest) {
       success: true,
       message: 'Registration rejected successfully',
     });
-
   } catch (error: any) {
+    const authResponse = registrationAuthErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Rejection error:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to reject registration' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Failed to reject registration' }, { status: 500 });
   }
 }

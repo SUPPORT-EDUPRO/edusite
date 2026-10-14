@@ -9,7 +9,7 @@ export const SITE_CONFIG = {
   title: 'EduSitePro | NCF-Aligned Websites for South African ECD Centres',
   description:
     'Professional website creation for Early Childhood Development centres across South Africa. NCF-aligned templates, bulk discounts, and seamless parent communication.',
-  url: process.env.NEXT_PUBLIC_SITE_URL || 'https://edusitepro.co.za',
+  url: (process.env.NEXT_PUBLIC_SITE_URL || 'https://edusitepro.co.za').trim(),
   ogImage: '/images/og-image.jpg',
   links: {
     twitter: 'https://twitter.com/edusitepro',

@@ -3,52 +3,42 @@ import { NextRequest, NextResponse } from 'next/server';
 import { CURRENT_ACADEMIC_YEAR } from '@/lib/academic-year';
 import { createClient } from '@/lib/auth';
 import { generateParentWelcomeEmail } from '@/lib/email-templates/parent-welcome';
+import {
+  formatStudentId,
+  generateSecurePassword,
+  getHighestStudentSequence,
+  getStudentIdPrefix,
+  requiresVerifiedPayment,
+  resolveEnrollmentDate,
+  STUDENT_ID_MAX_ATTEMPTS,
+} from '@/lib/registration-approval';
+import {
+  assertCanManageSchool,
+  registrationAuthErrorResponse,
+  requireRegistrationStaff,
+} from '@/lib/registration-staff-auth';
 import { getServiceRoleClient } from '@/lib/supabase';
+
+const PWA_URL = 'https://edudashpro.org.za';
 
 /**
  * POST /api/registrations/approve
- * 
- * Approves a registration and auto-creates parent account in EduDash Pro app
- * 
- * Flow:
- * 1. Verify admin authentication
- * 2. Get registration details
- * 3. Create parent account in Supabase Auth
- * 4. Create profile in profiles table
- * 5. Create student in students table
- * 6. Link student to organization (Young Eagles)
- * 7. Link parent to student
- * 8. Grant 7-day trial tier
- * 9. Update registration status to 'approved'
- * 10. Send welcome email with PWA download link
+ *
+ * Approves a registration for the signed-in principal's school (or any school for a super
+ * admin): finds or creates the parent account, creates the learner the same way the
+ * EduDash Pro app does (students.preschool_id, parent_id/guardian_id, status 'active'),
+ * redeems the campaign and marks the registration approved. Safe to retry.
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication with user client
-    const authSupabase = createClient();
-    const { data: { session } } = await authSupabase.auth.getSession();
-    
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
-
-    // Use service role client for admin operations
+    const staff = await requireRegistrationStaff();
     const supabase = getServiceRoleClient();
 
-    // Get request body
     const { registrationId } = await request.json();
-
-    if (!registrationId) {
-      return NextResponse.json(
-        { error: 'Registration ID is required' },
-        { status: 400 }
-      );
+    if (!registrationId || typeof registrationId !== 'string') {
+      return NextResponse.json({ error: 'Registration ID is required' }, { status: 400 });
     }
 
-    // 2. Get registration details
     const { data: registration, error: regError } = await supabase
       .from('registration_requests')
       .select('*')
@@ -56,277 +46,283 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (regError || !registration) {
-      return NextResponse.json(
-        { error: 'Registration not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
+    assertCanManageSchool(staff, registration.organization_id);
 
     if (registration.status === 'approved') {
+      return NextResponse.json({ error: 'Registration already approved' }, { status: 400 });
+    }
+    if (registration.status !== 'pending') {
       return NextResponse.json(
-        { error: 'Registration already approved' },
-        { status: 400 }
+        { error: 'Only pending registrations can be approved' },
+        { status: 400 },
+      );
+    }
+    if (requiresVerifiedPayment(registration) && !registration.payment_verified) {
+      return NextResponse.json(
+        {
+          error:
+            'Payment must be verified before approval. Please verify the proof of payment first.',
+        },
+        { status: 400 },
       );
     }
 
-    // Check payment verification
-    if (!registration.payment_verified) {
-      return NextResponse.json(
-        { error: 'Payment must be verified before approval. Please verify the proof of payment first.' },
-        { status: 400 }
-      );
+    const schoolId: string = registration.organization_id;
+    const guardianEmail = String(registration.guardian_email ?? '')
+      .trim()
+      .toLowerCase();
+    if (!guardianEmail) {
+      return NextResponse.json({ error: 'Registration has no guardian email' }, { status: 400 });
     }
 
-    // 3. Create parent account in Supabase Auth (or get existing)
-    const tempPassword = generateSecurePassword();
-    
-    // Check if user already exists
-    const { data: existingUsers } = await supabase.auth.admin.listUsers();
-    const existingUser = existingUsers?.users.find(u => u.email === registration.guardian_email);
-    
-    let authData;
-    if (existingUser) {
-      // User already exists, use existing account
-      authData = { user: existingUser };
-      console.log('Using existing user account:', registration.guardian_email);
+    // 1. Parent: reuse an existing profile (the same email may already use EduDash Pro).
+    let parentId: string | null = null;
+    let tempPassword: string | null = null;
+    const { data: existingProfile } = await supabase
+      .from('profiles')
+      .select('id, role, preschool_id, organization_id')
+      .ilike('email', guardianEmail)
+      .maybeSingle();
+
+    if (existingProfile?.id) {
+      parentId = existingProfile.id;
+      const needsLink =
+        existingProfile.role === 'parent' &&
+        (existingProfile.preschool_id !== schoolId || existingProfile.organization_id !== schoolId);
+      if (needsLink) {
+        // Runs as the signed-in staff member so the database checks they may link this school.
+        const { error: linkError } = await createClient().rpc('link_profile_to_school', {
+          p_target_profile_id: parentId,
+          p_school_id: schoolId,
+          p_role: 'parent',
+        });
+        if (linkError) console.error('[approve] Parent link warning:', linkError.message);
+      }
     } else {
-      // Create new user
-      const { data: newUserData, error: createAuthError } = await supabase.auth.admin.createUser({
-        email: registration.guardian_email,
+      tempPassword = generateSecurePassword();
+      const { data: created, error: createAuthError } = await supabase.auth.admin.createUser({
+        email: guardianEmail,
         password: tempPassword,
-        email_confirm: true, // Auto-confirm email
+        email_confirm: true,
         user_metadata: {
           full_name: registration.guardian_name,
           phone: registration.guardian_phone,
           role: 'parent',
-          organization_id: registration.organization_id,
+          organization_id: schoolId,
           onboarding_source: 'registration_approval',
-        }
+        },
       });
+      if (createAuthError || !created.user) {
+        console.error('[approve] Create account failed:', createAuthError?.message);
+        return NextResponse.json({ error: 'Failed to create the parent account' }, { status: 500 });
+      }
+      parentId = created.user.id;
+      const { error: profileError } = await supabase.from('profiles').upsert(
+        {
+          id: parentId,
+          auth_user_id: parentId,
+          email: guardianEmail,
+          full_name: registration.guardian_name,
+          phone: registration.guardian_phone ?? null,
+          role: 'parent',
+          preschool_id: schoolId,
+          organization_id: schoolId,
+        },
+        { onConflict: 'id' },
+      );
+      if (profileError) {
+        console.error('[approve] Profile upsert failed:', profileError.message);
+        return NextResponse.json({ error: 'Failed to create the parent profile' }, { status: 500 });
+      }
+    }
 
-      if (createAuthError || !newUserData.user) {
+    // 2. Learner: reuse the linked or already-created learner so a retry never duplicates.
+    let studentRow: {
+      id: string;
+      student_id: string | null;
+      first_name: string;
+      last_name: string;
+    } | null = null;
+    if (registration.edudash_student_id) {
+      const { data } = await supabase
+        .from('students')
+        .select('id, student_id, first_name, last_name')
+        .eq('id', registration.edudash_student_id)
+        .maybeSingle();
+      studentRow = data;
+    }
+    if (!studentRow) {
+      const { data } = await supabase
+        .from('students')
+        .select('id, student_id, first_name, last_name')
+        .eq('preschool_id', schoolId)
+        .ilike('first_name', registration.student_first_name.trim())
+        .ilike('last_name', registration.student_last_name.trim())
+        .eq('date_of_birth', registration.student_dob)
+        .is('deleted_at', null)
+        .limit(1)
+        .maybeSingle();
+      studentRow = data;
+    }
+
+    let studentCreated = false;
+    if (!studentRow) {
+      const { data: school } = await supabase
+        .from('preschools')
+        .select('name')
+        .eq('id', schoolId)
+        .maybeSingle();
+      const prefix = getStudentIdPrefix(school?.name);
+      const { data: existingIds } = await supabase
+        .from('students')
+        .select('student_id')
+        .like('student_id', `${prefix}%`);
+      const lastSequence = getHighestStudentSequence(
+        (existingIds ?? []).map((row) => row.student_id),
+        prefix,
+      );
+
+      for (let attempt = 1; attempt <= STUDENT_ID_MAX_ATTEMPTS && !studentRow; attempt += 1) {
+        const { data, error } = await supabase
+          .from('students')
+          .insert({
+            student_id: formatStudentId(prefix, lastSequence + attempt),
+            first_name: registration.student_first_name.trim(),
+            last_name: registration.student_last_name.trim(),
+            date_of_birth: registration.student_dob,
+            gender: registration.student_gender ?? null,
+            enrollment_date: resolveEnrollmentDate(registration.preferred_start_date),
+            academic_year: registration.academic_year || CURRENT_ACADEMIC_YEAR,
+            parent_id: parentId,
+            guardian_id: parentId,
+            preschool_id: schoolId,
+            is_active: true,
+            status: 'active',
+            home_address: registration.guardian_address ?? null,
+            home_phone: registration.guardian_phone ?? null,
+            emergency_contact_name: registration.guardian_name,
+            emergency_contact_phone: registration.guardian_phone,
+          })
+          .select('id, student_id, first_name, last_name')
+          .single();
+
+        if (!error) {
+          studentRow = data;
+          studentCreated = true;
+        } else if (error.code !== '23505') {
+          console.error('[approve] Student creation failed:', error.message);
+          return NextResponse.json({ error: 'Failed to create the learner' }, { status: 500 });
+        }
+      }
+      if (!studentRow) {
         return NextResponse.json(
-          { error: `Failed to create account: ${createAuthError?.message}` },
-          { status: 500 }
+          { error: 'Failed to allocate a student ID. Try again.' },
+          { status: 500 },
         );
       }
-      
-      authData = newUserData;
+    } else {
+      await supabase
+        .from('students')
+        .update({ parent_id: parentId, guardian_id: parentId })
+        .eq('id', studentRow.id);
     }
 
-    // 4. Create or update profile in profiles table
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert({
-        id: authData.user.id,
-        email: registration.guardian_email,
-        full_name: registration.guardian_name,
-        role: 'parent',
-        preschool_id: null, // Set to null if no preschool record
-        organization_id: registration.organization_id, // Link to organization
-      }, {
-        onConflict: 'id',
-      });
-
-    if (profileError) {
-      console.error('Profile creation error:', profileError);
-      // Continue anyway - profile might already exist
-    }
-
-    // 5. Create student in students table
-    // Generate student ID: YE-YEAR-RANDOM (Young Eagles format)
-    const studentId = `YE-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
-    
-    const { data: studentData, error: studentError } = await supabase
-      .from('students')
-      .insert({
-        organization_id: registration.organization_id, // Young Eagles org ID from registration
-        preschool_id: null, // Set to null if no preschool record exists
-        student_id: studentId,
-        first_name: registration.student_first_name,
-        last_name: registration.student_last_name,
-        date_of_birth: registration.student_dob,
-        status: 'enrolled',
-        academic_year: registration.academic_year || CURRENT_ACADEMIC_YEAR,
-        home_address: registration.guardian_address,
-        home_phone: registration.guardian_phone,
-      })
-      .select()
-      .single();
-
-    if (studentError) {
-      console.error('Student creation error:', studentError);
-      return NextResponse.json(
-        { error: `Failed to create student: ${studentError.message}` },
-        { status: 500 }
-      );
-    }
-
-    // 6. Link parent to student via student_guardians table
-    const { error: guardianLinkError } = await supabase
-      .from('student_guardians')
-      .insert({
-        student_id: studentData.id,
-        guardian_id: authData.user.id,
-        relationship: 'guardian',
-        primary_contact: true,
-        can_pickup: true,
-      });
-
-    if (guardianLinkError) {
-      console.error('Guardian link error:', guardianLinkError);
-      // Continue anyway - link can be created later
-    }
-
-    // 7. Increment promo code redemption counter if campaign was applied
-    if (registration.campaign_applied) {
-      // Atomic increment using SQL function
-      const { error: campaignUpdateError } = await supabase.rpc('increment_campaign_redemptions', {
-        campaign_id: registration.campaign_applied
-      });
-
-      if (campaignUpdateError) {
-        console.error('Campaign redemption counter update error:', campaignUpdateError);
-        // Try fallback: manual fetch-increment-update (not atomic but better than nothing)
-        try {
-          const { data: campaign } = await supabase
-            .from('marketing_campaigns')
-            .select('current_redemptions')
-            .eq('id', registration.campaign_applied)
-            .single();
-          
-          if (campaign) {
-            await supabase
-              .from('marketing_campaigns')
-              .update({ current_redemptions: (campaign.current_redemptions || 0) + 1 })
-              .eq('id', registration.campaign_applied);
-            
-            console.log('✅ Promo code redemption counter incremented (fallback method)');
-          }
-        } catch (fallbackError) {
-          console.error('Fallback campaign update also failed:', fallbackError);
-        }
-      } else {
-        console.log('✅ Promo code redemption counter incremented for campaign:', registration.campaign_applied);
-      }
-    }
-
-    // 9. Update registration status
-    const { error: updateError } = await supabase
+    // 3. Mark approved. Only a still-pending row is updated, so a double click cannot redeem twice.
+    const { data: approvedRows, error: updateError } = await supabase
       .from('registration_requests')
       .update({
         status: 'approved',
+        reviewed_by: staff.userId,
         reviewed_date: new Date().toISOString(),
-        reviewed_by: session.user.id,
-        approved_from_edusite: true, // Flag to indicate approval came from EduSitePro (not EduDashPro)
+        edudash_student_id: studentRow.id,
+        edudash_parent_id: parentId,
       })
-      .eq('id', registrationId);
+      .eq('id', registrationId)
+      .eq('status', 'pending')
+      .select('id');
 
     if (updateError) {
-      console.error('Registration update error:', updateError);
-    }
-
-    // Define PWA URL for response - use edudashpro.org.za as the main app domain
-    const pwaUrl = 'https://edudashpro.org.za';
-
-    // 10. Send welcome email ONLY if this approval is from EduSitePro (not synced from EduDashPro)
-    // If synced_from_edusite is true, EduDashPro already sent the email
-    if (registration.synced_from_edusite || registration.edudash_parent_id) {
-      console.log('[approve] Skipping email - already handled by EduDashPro');
-    } else {
-    try {
-      // Get organization details for school name
-      const { data: orgData } = await supabase
-        .from('organizations')
-        .select('name')
-        .eq('id', registration.organization_id)
-        .single();
-
-      const schoolName = orgData?.name || 'Young Eagles Education Centre';
-
-      // Generate email content with PWA link and 7-day trial
-      const emailContent = generateParentWelcomeEmail({
-        parentName: registration.guardian_name,
-        parentEmail: registration.guardian_email,
-        tempPassword: tempPassword,
-        studentName: `${studentData.first_name} ${studentData.last_name}`,
-        studentId: studentId,
-        schoolName: schoolName,
-        androidAppUrl: pwaUrl, // Use PWA URL for now (no native app yet)
-        iosAppUrl: pwaUrl, // Same PWA works for iOS
-      });
-
-      // Call send-email Edge Function
-      const emailResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-email`,
+      console.error('[approve] Registration update failed:', updateError.message);
+      return NextResponse.json(
         {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
-          },
-          body: JSON.stringify({
-            to: registration.guardian_email,
-            subject: emailContent.subject,
-            body: emailContent.html, // Edge Function expects 'body' not 'html'
-            is_html: true,
-            confirmed: true, // Explicit confirmation required by Edge Function
-          }),
-        }
+          error:
+            'The learner was created but the registration could not be marked approved. Try again.',
+        },
+        { status: 500 },
       );
-
-      if (!emailResponse.ok) {
-        const emailError = await emailResponse.json();
-        console.error('Failed to send welcome email:', emailError);
-        // Don't fail the approval if email fails - parent can still access app
-      } else {
-        console.log('Welcome email sent successfully to:', registration.guardian_email);
-      }
-    } catch (emailError) {
-      console.error('Email sending error:', emailError);
-      // Don't fail the approval if email fails
     }
-    } // End of email sending block
+
+    if (approvedRows?.length && registration.campaign_applied) {
+      const { error: redeemError } = await supabase.rpc('increment_campaign_redemptions', {
+        campaign_id: registration.campaign_applied,
+      });
+      if (redeemError) console.error('[approve] Campaign redemption warning:', redeemError.message);
+    }
+
+    // 4. Welcome email with the temporary password, only for a brand-new account.
+    if (tempPassword && !registration.synced_from_edusite) {
+      try {
+        const { data: school } = await supabase
+          .from('preschools')
+          .select('name')
+          .eq('id', schoolId)
+          .maybeSingle();
+        const emailContent = generateParentWelcomeEmail({
+          parentName: registration.guardian_name,
+          parentEmail: guardianEmail,
+          tempPassword,
+          studentName: `${studentRow.first_name} ${studentRow.last_name}`,
+          studentId: studentRow.student_id ?? '',
+          schoolName: school?.name || 'Young Eagles Education Centre',
+          androidAppUrl: PWA_URL,
+          iosAppUrl: PWA_URL,
+        });
+        const emailResponse = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-email`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+            },
+            body: JSON.stringify({
+              to: guardianEmail,
+              subject: emailContent.subject,
+              body: emailContent.html,
+              is_html: true,
+              confirmed: true,
+            }),
+          },
+        );
+        if (!emailResponse.ok)
+          console.error('[approve] Welcome email failed:', emailResponse.status);
+      } catch (emailError) {
+        console.error('[approve] Welcome email error:', emailError);
+      }
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Registration approved successfully',
       data: {
         parent: {
-          email: registration.guardian_email,
-          appDownloadLinks: {
-            android: pwaUrl,
-            ios: pwaUrl,
-          }
+          email: guardianEmail,
+          appDownloadLinks: { android: PWA_URL, ios: PWA_URL },
         },
         student: {
-          id: studentData.id,
-          studentId: studentId,
-          name: `${studentData.first_name} ${studentData.last_name}`,
-        }
-      }
+          id: studentRow.id,
+          studentId: studentRow.student_id,
+          name: `${studentRow.first_name} ${studentRow.last_name}`,
+          created: studentCreated,
+        },
+      },
     });
-
   } catch (error) {
-    console.error('Approval error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    const authResponse = registrationAuthErrorResponse(error);
+    if (authResponse) return authResponse;
+    console.error('[approve] Unexpected error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
-}
-
-/**
- * Generate a secure temporary password
- */
-function generateSecurePassword(): string {
-  const length = 12;
-  const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%^&*';
-  let password = '';
-  
-  for (let i = 0; i < length; i++) {
-    password += charset.charAt(Math.floor(Math.random() * charset.length));
-  }
-  
-  return password;
 }

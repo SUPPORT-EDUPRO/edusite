@@ -1,26 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import { createClient } from '@/lib/auth';
 import { generateRegistrationConfirmation } from '@/lib/email-templates/registration-confirmation';
+import {
+  assertCanManageSchool,
+  registrationAuthErrorResponse,
+  requireRegistrationStaff,
+} from '@/lib/registration-staff-auth';
 import { getServiceRoleClient } from '@/lib/supabase';
 
 /**
  * POST /api/registrations/resend-email
- * 
+ *
  * Resend the registration confirmation email to a parent
  */
 export async function POST(request: NextRequest) {
   try {
-    // Check authentication
-    const authSupabase = createClient();
-    const { data: { session } } = await authSupabase.auth.getSession();
-    
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const staff = await requireRegistrationStaff();
 
     // Use service role client for admin operations
     const supabase = getServiceRoleClient();
@@ -29,10 +24,7 @@ export async function POST(request: NextRequest) {
     const { registrationId } = await request.json();
 
     if (!registrationId) {
-      return NextResponse.json(
-        { error: 'Registration ID is required' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: 'Registration ID is required' }, { status: 400 });
     }
 
     // Get registration details
@@ -43,15 +35,14 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (regError || !registration) {
-      return NextResponse.json(
-        { error: 'Registration not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: 'Registration not found' }, { status: 404 });
     }
+
+    assertCanManageSchool(staff, registration.organization_id);
 
     // Get organization details for school name
     const { data: orgData } = await supabase
-      .from('organizations')
+      .from('preschools')
       .select('name')
       .eq('id', registration.organization_id)
       .single();
@@ -78,7 +69,7 @@ export async function POST(request: NextRequest) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
         },
         body: JSON.stringify({
           to: registration.guardian_email,
@@ -87,7 +78,7 @@ export async function POST(request: NextRequest) {
           is_html: true,
           confirmed: true,
         }),
-      }
+      },
     );
 
     if (!emailResponse.ok) {
@@ -95,7 +86,7 @@ export async function POST(request: NextRequest) {
       console.error('Failed to send email:', emailError);
       return NextResponse.json(
         { error: `Failed to send email: ${emailError.error || 'Unknown error'}` },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -107,14 +98,12 @@ export async function POST(request: NextRequest) {
       data: {
         email: registration.guardian_email,
         registrationId: registration.id,
-      }
+      },
     });
-
   } catch (error) {
+    const authResponse = registrationAuthErrorResponse(error);
+    if (authResponse) return authResponse;
     console.error('Resend email error:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
