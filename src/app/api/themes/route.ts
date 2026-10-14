@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
+import { requireAdminTokenOrSession } from '@/lib/api/auth-guard';
+
 function srClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -10,6 +12,9 @@ function srClient() {
 }
 
 export async function GET(request: Request) {
+  const authError = await requireAdminTokenOrSession(request);
+  if (authError) return authError;
+
   try {
     const supabase = srClient();
 
@@ -35,6 +40,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAdminTokenOrSession(request);
+  if (authError) return authError;
+
   try {
     const supabase = srClient();
     const body = await request.json();

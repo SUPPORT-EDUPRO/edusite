@@ -1,9 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
+import { requireAdminTokenOrSession } from '@/lib/api/auth-guard';
+
 // POST /api/admin/seed
 // Seeds a sample page with all blocks and array-heavy content
 export async function POST(request: Request) {
+  const authError = await requireAdminTokenOrSession(request);
+  if (authError) return authError;
+
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

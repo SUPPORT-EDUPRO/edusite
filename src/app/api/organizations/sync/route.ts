@@ -7,6 +7,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextRequest, NextResponse } from 'next/server';
 
+import { requireAdminToken } from '@/lib/api/auth-guard';
+
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
@@ -36,6 +38,9 @@ export async function OPTIONS() {
  * }
  */
 export async function POST(request: NextRequest) {
+  const authError = requireAdminToken(request);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const {

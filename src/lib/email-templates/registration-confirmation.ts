@@ -1,6 +1,14 @@
+import {
+  formatYoungEaglesRand,
+  formatYoungEaglesRandWithCents,
+  YOUNG_EAGLES_AFTERCARE_FEE,
+  YOUNG_EAGLES_MONTHLY_FEES,
+  YOUNG_EAGLES_REGISTRATION_FEE_RAND,
+} from '@/lib/young-eagles-fees';
+
 /**
  * Registration Confirmation Email Template
- * 
+ *
  * Sent immediately after a parent submits a registration.
  * Provides next steps and important information about the approval process.
  */
@@ -17,18 +25,27 @@ interface RegistrationConfirmationData {
   paymentReference?: string;
 }
 
-export function generateRegistrationConfirmation(data: RegistrationConfirmationData): { subject: string; html: string; text: string } {
+export function generateRegistrationConfirmation(data: RegistrationConfirmationData): {
+  subject: string;
+  html: string;
+  text: string;
+} {
   const {
     parentName,
     parentEmail,
     studentName,
     schoolName,
     registrationId,
-    registrationFee = 300,
+    registrationFee = YOUNG_EAGLES_REGISTRATION_FEE_RAND,
     discountApplied = false,
-    originalFee = 300,
+    originalFee = YOUNG_EAGLES_REGISTRATION_FEE_RAND,
     paymentReference,
   } = data;
+
+  const discountLabel =
+    registrationFee <= 0
+      ? 'FEE WAIVED'
+      : `${Math.round((1 - registrationFee / Math.max(originalFee, registrationFee)) * 100)}% OFF`;
 
   // Shorten payment reference to last 12 characters for display
   const shortReference = paymentReference ? paymentReference.slice(-12) : registrationId.slice(-12);
@@ -83,9 +100,10 @@ export function generateRegistrationConfirmation(data: RegistrationConfirmationD
                 </p>
                 <p style="margin: 20px 0 0; color: #555555; font-size: 16px;">
                   <strong>Registration Fee:</strong><br>
-                  ${discountApplied 
-                    ? `<span style="text-decoration: line-through; color: #999; font-size: 18px;">R${originalFee.toFixed(2)}</span> <span style="color: #28a745; font-size: 28px; font-weight: bold;">R${registrationFee.toFixed(2)}</span> <span style="background-color: #d4edda; color: #155724; padding: 6px 12px; border-radius: 4px; font-size: 16px; font-weight: bold;">50% OFF</span>`
-                    : `<span style="color: #333; font-size: 28px; font-weight: bold;">R${registrationFee.toFixed(2)}</span>`
+                  ${
+                    discountApplied
+                      ? `<span style="text-decoration: line-through; color: #999; font-size: 18px;">R${originalFee.toFixed(2)}</span> <span style="color: #28a745; font-size: 28px; font-weight: bold;">R${registrationFee.toFixed(2)}</span> <span style="background-color: #d4edda; color: #155724; padding: 6px 12px; border-radius: 4px; font-size: 16px; font-weight: bold;">${discountLabel}</span>`
+                      : `<span style="color: #333; font-size: 28px; font-weight: bold;">R${registrationFee.toFixed(2)}</span>`
                   }
                 </p>
               </div>
@@ -171,17 +189,22 @@ export function generateRegistrationConfirmation(data: RegistrationConfirmationD
                 
                 <div style="padding: 15px 0; border-bottom: 1px solid #e1bee7;">
                   <p style="margin: 0; color: #333333; font-size: 17px; display: inline-block; width: 60%;">6 months - 1 year</p>
-                  <p style="margin: 0; color: #333333; font-size: 18px; font-weight: 600; display: inline-block; width: 38%; text-align: right;">R850.00</p>
+                  <p style="margin: 0; color: #333333; font-size: 18px; font-weight: 600; display: inline-block; width: 38%; text-align: right;">${formatYoungEaglesRand(YOUNG_EAGLES_MONTHLY_FEES[0].amountRand)}.00</p>
                 </div>
                 
                 <div style="padding: 15px 0; border-bottom: 1px solid #e1bee7;">
                   <p style="margin: 0; color: #333333; font-size: 17px; display: inline-block; width: 60%;">1 - 3 years</p>
-                  <p style="margin: 0; color: #333333; font-size: 18px; font-weight: 600; display: inline-block; width: 38%; text-align: right;">R720.00</p>
+                  <p style="margin: 0; color: #333333; font-size: 18px; font-weight: 600; display: inline-block; width: 38%; text-align: right;">${formatYoungEaglesRand(YOUNG_EAGLES_MONTHLY_FEES[1].amountRand)}.00</p>
                 </div>
                 
                 <div style="padding: 15px 0;">
                   <p style="margin: 0; color: #333333; font-size: 17px; display: inline-block; width: 60%;">4 - 6 years</p>
-                  <p style="margin: 0; color: #333333; font-size: 18px; font-weight: 600; display: inline-block; width: 38%; text-align: right;">R680.00</p>
+                  <p style="margin: 0; color: #333333; font-size: 18px; font-weight: 600; display: inline-block; width: 38%; text-align: right;">${formatYoungEaglesRand(YOUNG_EAGLES_MONTHLY_FEES[2].amountRand)}.00</p>
+                </div>
+
+                <div style="padding: 15px 0; border-top: 1px solid #e1bee7;">
+                  <p style="margin: 0; color: #333333; font-size: 17px; display: inline-block; width: 60%;">${YOUNG_EAGLES_AFTERCARE_FEE.label} (optional extra)</p>
+                  <p style="margin: 0; color: #333333; font-size: 18px; font-weight: 600; display: inline-block; width: 38%; text-align: right;">${formatYoungEaglesRandWithCents(YOUNG_EAGLES_AFTERCARE_FEE.amountRand)}</p>
                 </div>
                 
                 <p style="margin: 20px 0 0; color: #555555; font-size: 15px; font-style: italic;">
@@ -273,9 +296,10 @@ NEXT STEPS
 
 MONTHLY FEE STRUCTURE
 --------------------
-6 months - 1 year: R850.00/month
-1 - 3 years: R720.00/month
-4 - 6 years: R680.00/month
+6 months - 1 year: ${formatYoungEaglesRand(YOUNG_EAGLES_MONTHLY_FEES[0].amountRand)}.00/month
+1 - 3 years: ${formatYoungEaglesRand(YOUNG_EAGLES_MONTHLY_FEES[1].amountRand)}.00/month
+4 - 6 years: ${formatYoungEaglesRand(YOUNG_EAGLES_MONTHLY_FEES[2].amountRand)}.00/month
+Aftercare (optional extra): ${formatYoungEaglesRandWithCents(YOUNG_EAGLES_AFTERCARE_FEE.amountRand)}/month
 
 Note: Monthly fees are charged in addition to the one-time registration fee.
 

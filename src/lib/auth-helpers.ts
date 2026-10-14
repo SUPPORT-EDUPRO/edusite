@@ -12,7 +12,7 @@ import { cookies } from 'next/headers';
  */
 export async function verifySuperAdmin() {
   const cookieStore = await cookies();
-  
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -28,24 +28,26 @@ export async function verifySuperAdmin() {
           // No-op in API routes
         },
       },
-    }
+    },
   );
 
-  // Get session using SSR client
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  
-  if (sessionError || !session) {
-    console.log('[verifySuperAdmin] No session found');
+  // getUser() re-validates the token with Supabase Auth; getSession() only reads the cookie,
+  // which a caller could forge.
+  const {
+    data: { user },
+    error: sessionError,
+  } = await supabase.auth.getUser();
+
+  if (sessionError || !user) {
+    console.log('[verifySuperAdmin] No verified user found');
     return null;
   }
-
-  console.log('[verifySuperAdmin] Session found for user:', session.user.email);
 
   // Check user role
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('id, email, role, organization_id')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single();
 
   if (profileError || !profile) {
@@ -73,7 +75,7 @@ export async function verifySuperAdmin() {
  */
 export async function verifyAdmin() {
   const cookieStore = await cookies();
-  
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -89,24 +91,26 @@ export async function verifyAdmin() {
           // No-op in API routes
         },
       },
-    }
+    },
   );
 
-  // Get session using SSR client
-  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-  
-  if (sessionError || !session) {
-    console.log('[verifyAdmin] No session found');
+  // getUser() re-validates the token with Supabase Auth; getSession() only reads the cookie,
+  // which a caller could forge.
+  const {
+    data: { user },
+    error: sessionError,
+  } = await supabase.auth.getUser();
+
+  if (sessionError || !user) {
+    console.log('[verifyAdmin] No verified user found');
     return null;
   }
-
-  console.log('[verifyAdmin] Session found for user:', session.user.email);
 
   // Check user role - allow both superadmin and admin
   const { data: profile, error: profileError } = await supabase
     .from('profiles')
     .select('id, email, role, organization_id')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single();
 
   if (profileError || !profile) {
@@ -134,12 +138,12 @@ export async function verifyAdmin() {
 export function unauthorizedResponse(message: string = 'Unauthorized access') {
   return Response.json(
     { error: message },
-    { 
+    {
       status: 401,
       headers: {
         'Content-Type': 'application/json',
-      }
-    }
+      },
+    },
   );
 }
 
@@ -149,11 +153,11 @@ export function unauthorizedResponse(message: string = 'Unauthorized access') {
 export function forbiddenResponse(message: string = 'Insufficient permissions') {
   return Response.json(
     { error: message },
-    { 
+    {
       status: 403,
       headers: {
         'Content-Type': 'application/json',
-      }
-    }
+      },
+    },
   );
 }

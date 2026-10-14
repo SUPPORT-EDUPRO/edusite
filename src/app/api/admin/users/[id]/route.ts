@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+import { forbiddenResponse, verifySuperAdmin } from '@/lib/auth-helpers';
 import { getServiceRoleClient } from '@/lib/supabase';
 
 /**
@@ -17,6 +18,10 @@ export async function DELETE(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!(await verifySuperAdmin())) {
+    return forbiddenResponse('SuperAdmin access required');
+  }
+
   try {
     const userId = params.id;
 
@@ -226,6 +231,10 @@ export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!(await verifySuperAdmin())) {
+    return forbiddenResponse('SuperAdmin access required');
+  }
+
   try {
     const userId = params.id;
 
@@ -313,6 +322,10 @@ export async function PATCH(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
+  if (!(await verifySuperAdmin())) {
+    return forbiddenResponse('SuperAdmin access required');
+  }
+
   try {
     const userId = params.id;
     const body = await request.json();

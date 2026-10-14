@@ -2,6 +2,8 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 
+import { forbiddenResponse, verifySuperAdmin } from '@/lib/auth-helpers';
+
 /**
  * POST /api/admin/onboard-organization
  * 
@@ -12,14 +14,10 @@ export async function POST(request: Request) {
   try {
     const supabase = createRouteHandlerClient({ cookies });
 
-    // Check if requester is authenticated and is super-admin
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    // Only a verified super admin may onboard an organization.
+    const superAdmin = await verifySuperAdmin();
+    if (!superAdmin) {
+      return forbiddenResponse('SuperAdmin access required');
     }
 
     // Get request body
@@ -204,7 +202,7 @@ export async function POST(request: Request) {
     const { error: auditError } = await supabase
       .from('audit_logs')
       .insert({
-        user_id: session.user.id,
+        user_id: superAdmin.id,
         organization_id: organization.id,
         action: 'create_organization',
         resource_type: 'organization',

@@ -1,6 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
+import { requireAdminTokenOrSession } from '@/lib/api/auth-guard';
+
 function srClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,6 +15,9 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
 
 export async function POST(request: Request) {
+  const authError = await requireAdminTokenOrSession(request);
+  if (authError) return authError;
+
   try {
     const supabase = srClient();
 

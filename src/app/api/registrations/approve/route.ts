@@ -12,6 +12,7 @@ import {
   resolveEnrollmentDate,
   STUDENT_ID_MAX_ATTEMPTS,
 } from '@/lib/registration-approval';
+import { buildStartupTuitionFees, type FeeStructureRow } from '@/lib/registration-fees';
 import {
   assertCanManageSchool,
   registrationAuthErrorResponse,
@@ -227,6 +228,38 @@ export async function POST(request: NextRequest) {
         .from('students')
         .update({ parent_id: parentId, guardian_id: parentId })
         .eq('id', studentRow.id);
+    }
+
+    // 2b. First two monthly tuition invoices, as the EduDash Pro app creates them. Skipped when the
+    // learner already has fees (a retried approval) and never blocks the approval itself.
+    try {
+      const { count: existingFees } = await supabase
+        .from('student_fees')
+        .select('id', { count: 'exact', head: true })
+        .eq('student_id', studentRow.id);
+      if (!existingFees) {
+        const { data: structures } = await supabase
+          .from('fee_structures')
+          .select(
+            'id, amount, fee_type, name, description, grade_levels, effective_from, created_at, age_min_months, age_max_months',
+          )
+          .eq('preschool_id', schoolId)
+          .eq('is_active', true)
+          .order('effective_from', { ascending: false })
+          .order('created_at', { ascending: false });
+        const fees = buildStartupTuitionFees({
+          studentId: studentRow.id,
+          structures: (structures ?? []) as FeeStructureRow[],
+          dateOfBirth: registration.student_dob,
+          enrollmentDate: resolveEnrollmentDate(registration.preferred_start_date),
+        });
+        if (fees.length) {
+          const { error: feeError } = await supabase.from('student_fees').insert(fees);
+          if (feeError) console.error('[approve] Fee assignment warning:', feeError.message);
+        }
+      }
+    } catch (feeError) {
+      console.error('[approve] Fee assignment warning:', feeError);
     }
 
     // 3. Mark approved. Only a still-pending row is updated, so a double click cannot redeem twice.

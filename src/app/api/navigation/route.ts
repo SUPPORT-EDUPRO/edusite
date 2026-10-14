@@ -1,7 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import { NextResponse } from 'next/server';
 
-export async function GET() {
+import { requireAdminTokenOrSession } from '@/lib/api/auth-guard';
+
+export async function GET(request: Request) {
+  const authError = await requireAdminTokenOrSession(request);
+  if (authError) return authError;
+
   try {
     // Use service role to bypass RLS for admin operations
     const supabase = createClient(
@@ -25,6 +30,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
+  const authError = await requireAdminTokenOrSession(request);
+  if (authError) return authError;
+
   try {
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
