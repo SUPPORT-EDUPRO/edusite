@@ -4,11 +4,11 @@ import { CheckCircle2, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 import { useMemo, useState } from 'react';
 
-import { persistYoungEagles2027Registration } from '@/lib/persist-young-eagles-2027-registration';
 import {
   type RegistrationCampaignView,
   resolveDisplayedRegistrationCampaign,
 } from '@/lib/registration-campaign';
+import { submitYoungEagles2027ToServer } from '@/lib/submit-young-eagles-2027-client';
 import {
   initialYoungEagles2027RegistrationState,
   validateYoungEagles2027Step,
@@ -123,17 +123,12 @@ export function YoungEagles2027RegistrationPreview({
       setSubmitError(message);
       return;
     }
-    if (!organizationId) return;
+    if (!persistEnabled) return;
 
     setSubmitting(true);
     setSubmitError('');
     try {
-      const { supabase } = await import('@/lib/supabase');
-      await persistYoungEagles2027Registration(supabase, {
-        organizationId,
-        values,
-        campaign: displayedCampaign,
-      });
+      await submitYoungEagles2027ToServer(values);
       setSubmitted(true);
     } catch (error) {
       setSubmitError(

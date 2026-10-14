@@ -81,7 +81,7 @@ describe('persistYoungEagles2027Registration', () => {
   });
 
   it('persists a pending row and rejects a duplicate child', async () => {
-    let inserted: Record<string, unknown> | null = null;
+    let inserted = null as Record<string, unknown> | null;
     const client = {
       from() {
         return {
@@ -109,7 +109,7 @@ describe('persistYoungEagles2027Registration', () => {
       },
     };
 
-    const first = await persistYoungEagles2027Registration(client, {
+    const first = await persistYoungEagles2027Registration(client as never, {
       organizationId: YOUNG_EAGLES_ORGANIZATION_ID,
       values,
       campaign: null,
@@ -120,7 +120,7 @@ describe('persistYoungEagles2027Registration', () => {
     expect(inserted?.status).toBe('pending');
 
     await expect(
-      persistYoungEagles2027Registration(client, {
+      persistYoungEagles2027Registration(client as never, {
         organizationId: YOUNG_EAGLES_ORGANIZATION_ID,
         values,
         campaign: null,
