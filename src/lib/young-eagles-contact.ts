@@ -4,9 +4,8 @@
  * public Young Eagles website contact page; confirm them with the school if they ever change.
  */
 export const YOUNG_EAGLES_PHYSICAL_ADDRESS =
-  '7118 Section U Shabangu Street, Mamelodi West, Pretoria 0122';
-/** The pin used by Google Maps differs from the physical address. */
-export const YOUNG_EAGLES_MAPS_PIN = '848 Shabangu Avenue, Mamelodi West, Pretoria 0122';
+  '848 Shabangu Ave, Naledi, Pretoria, 0122';
+export const YOUNG_EAGLES_MAPS_PIN = YOUNG_EAGLES_PHYSICAL_ADDRESS;
 export const YOUNG_EAGLES_MAPS_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
   YOUNG_EAGLES_MAPS_PIN,
 )}`;
