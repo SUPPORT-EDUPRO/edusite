@@ -22,46 +22,45 @@ export function RegistrationCampaignBanner({
         ? 'FEE WAIVED'
         : `R${campaign.discountAmount} OFF`;
 
+  const spotsLeft =
+    campaign.remaining != null && campaign.remaining > 0 ? campaign.remaining : null;
+
   return (
     <aside
       aria-label={`${campaign.code} registration campaign`}
-      className="-mt-2 -mx-2 mb-6 overflow-hidden rounded-xl border-2 border-purple-500 bg-gradient-to-r from-purple-600 via-pink-600 to-orange-500 p-1 shadow-lg"
+      className="mb-6 rounded-[20px] border border-[#d9d0fb] bg-gradient-to-r from-[#f8f5ff] to-[#fff6ee] p-4 shadow-[0_8px_24px_rgba(118,81,214,0.10)] sm:p-5"
     >
-      <div className="flex flex-col items-center justify-between gap-3 rounded-lg bg-white px-5 py-4 sm:flex-row dark:bg-gray-800">
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg bg-purple-100 px-4 py-2 dark:bg-purple-900/50">
-            <p className="text-xs font-semibold tracking-wider text-purple-600 uppercase dark:text-purple-400">
-              Promo Code
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-5 gap-y-3">
+          <div className="rounded-xl bg-[#efe9ff] px-4 py-2">
+            <p className="text-[11px] font-extrabold tracking-[0.12em] text-[#6d4ccc] uppercase">
+              Promo code
             </p>
-            <p className="font-mono text-xl font-bold text-purple-700 sm:text-2xl dark:text-purple-300">
-              {campaign.code}
-            </p>
+            <p className="font-mono text-xl font-extrabold text-[#4b2fa8]">{campaign.code}</p>
           </div>
-          <div className="border-l border-gray-200 pl-4 dark:border-gray-600">
-            <p className="text-xs text-gray-500 dark:text-gray-400">Registration fee</p>
-            <p className="text-lg font-bold">
-              <span className="text-gray-400 line-through dark:text-gray-500">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold text-[#64748b]">Registration fee</p>
+            <p className="text-lg font-extrabold text-[#172f56]">
+              <span className="font-bold text-[#94a3b8] line-through">
                 {formatYoungEaglesRandWithCents(baseFeeRand)}
               </span>
-              <span className="mx-2 text-green-600 dark:text-green-400">→</span>
-              <span className="text-green-600 dark:text-green-500">
+              <span aria-hidden="true" className="mx-2 text-[#238265]">
+                →
+              </span>
+              <span className="text-[#238265]">
                 {formatYoungEaglesRandWithCents(campaign.finalAmount)}
               </span>
             </p>
-            <p className="text-xs font-medium text-purple-600 dark:text-purple-400">{discountLabel}</p>
+            <p className="text-xs font-bold text-[#6d4ccc]">{discountLabel}</p>
           </div>
         </div>
-        {campaign.remaining != null && campaign.remaining > 0 ? (
+        {spotsLeft != null ? (
           <span
-            className={`rounded-full px-4 py-2 text-sm font-bold text-white ${
-              campaign.remaining <= 10
-                ? 'bg-red-600'
-                : campaign.remaining <= 25
-                  ? 'bg-orange-500'
-                  : 'bg-purple-600'
+            className={`rounded-full px-4 py-2 text-sm font-extrabold text-white ${
+              spotsLeft <= 10 ? 'bg-red-600' : spotsLeft <= 25 ? 'bg-orange-500' : 'bg-[#6d4ccc]'
             }`}
           >
-            {campaign.remaining} spots left
+            {spotsLeft} spots left
           </span>
         ) : null}
       </div>

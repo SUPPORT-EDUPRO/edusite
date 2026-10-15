@@ -1,4 +1,14 @@
 import {
+  YOUNG_EAGLES_AFTERCARE_HOURS,
+  YOUNG_EAGLES_MAPS_URL,
+  YOUNG_EAGLES_OPERATING_DAYS,
+  YOUNG_EAGLES_PHYSICAL_ADDRESS,
+  YOUNG_EAGLES_PRIMARY_EMAIL,
+  YOUNG_EAGLES_PRIMARY_PHONE,
+  YOUNG_EAGLES_SCHOOL_HOURS,
+  YOUNG_EAGLES_WHATSAPP_URL,
+} from '@/lib/young-eagles-contact';
+import {
   formatYoungEaglesRand,
   formatYoungEaglesRandWithCents,
   YOUNG_EAGLES_AFTERCARE_FEE,
@@ -32,7 +42,6 @@ export function generateRegistrationConfirmation(data: RegistrationConfirmationD
 } {
   const {
     parentName,
-    parentEmail,
     studentName,
     schoolName,
     registrationId,
@@ -220,15 +229,25 @@ export function generateRegistrationConfirmation(data: RegistrationConfirmationD
                 </p>
                 <div style="margin: 20px 0;">
                   <p style="margin: 0 0 12px; color: #555555; font-size: 17px;">
-                    📧 <a href="mailto:admin@youngeagles.org.za" style="color: #667eea; text-decoration: none; font-size: 17px;">admin@youngeagles.org.za</a>
+                    📧 <a href="${YOUNG_EAGLES_PRIMARY_EMAIL.href}" style="color: #667eea; text-decoration: none; font-size: 17px;">${YOUNG_EAGLES_PRIMARY_EMAIL.label}</a>
                   </p>
                   <p style="margin: 0 0 12px; color: #555555; font-size: 17px;">
-                    📞 <a href="tel:+27604828855" style="color: #667eea; text-decoration: none; font-size: 17px;">+27 60 482 8855</a> / <a href="tel:+27820673133" style="color: #667eea; text-decoration: none; font-size: 17px;">+27 82 067 3133</a>
+                    📞 <a href="${YOUNG_EAGLES_PRIMARY_PHONE.href}" style="color: #667eea; text-decoration: none; font-size: 17px;">${YOUNG_EAGLES_PRIMARY_PHONE.label}</a>
                   </p>
-                  <a href="https://wa.me/27604828855?text=Hi%2C%20I%20have%20a%20question%20about%20my%20registration%20(${registrationId})" style="display: inline-block; margin-top: 15px; background-color: #25D366; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 17px;">
+                  <a href="${YOUNG_EAGLES_WHATSAPP_URL}?text=Hi%2C%20I%20have%20a%20question%20about%20my%20registration%20(${registrationId})" style="display: inline-block; margin-top: 15px; background-color: #25D366; color: white; padding: 14px 28px; border-radius: 6px; text-decoration: none; font-weight: 600; font-size: 17px;">
                     💬 Chat on WhatsApp
                   </a>
                 </div>
+              </div>
+
+              <!-- Visit us -->
+              <div style="width: 95%; max-width: 850px; background-color: #f8f5ff; border-radius: 8px; padding: 24px 20px; margin: 0 auto 40px 0; border-left: 6px solid #7651d6;">
+                <h3 style="margin: 0 0 10px; color: #4b2fa8; font-size: 20px; font-weight: 600;">🕒 School hours and location</h3>
+                <p style="margin: 0; color: #555555; font-size: 16px; line-height: 1.7;">
+                  ${YOUNG_EAGLES_OPERATING_DAYS}: school day ${YOUNG_EAGLES_SCHOOL_HOURS}, aftercare ${YOUNG_EAGLES_AFTERCARE_HOURS}<br>
+                  ${YOUNG_EAGLES_PHYSICAL_ADDRESS}<br>
+                  <a href="${YOUNG_EAGLES_MAPS_URL}" style="color: #667eea;">Directions on Google Maps</a>
+                </p>
               </div>
 
               <p style="margin: 40px 0 0; color: #333333; font-size: 18px; line-height: 1.6; text-align: center;">
@@ -332,9 +351,15 @@ EXPECTED TIMELINE
 
 NEED HELP?
 ----------
-Contact: admin@youngeagles.org.za
-Phone: +27 60 482 8855 / +27 82 067 3133
-WhatsApp: https://wa.me/27604828855
+Contact: ${YOUNG_EAGLES_PRIMARY_EMAIL.label}
+Phone: ${YOUNG_EAGLES_PRIMARY_PHONE.label}
+WhatsApp: ${YOUNG_EAGLES_WHATSAPP_URL}
+
+SCHOOL HOURS AND LOCATION
+-------------------------
+${YOUNG_EAGLES_OPERATING_DAYS}: school day ${YOUNG_EAGLES_SCHOOL_HOURS}, aftercare ${YOUNG_EAGLES_AFTERCARE_HOURS}
+${YOUNG_EAGLES_PHYSICAL_ADDRESS}
+Directions: ${YOUNG_EAGLES_MAPS_URL}
 
 Thank you for choosing ${schoolName}. We look forward to welcoming ${studentName}!
 

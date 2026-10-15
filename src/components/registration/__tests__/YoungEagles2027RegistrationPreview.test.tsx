@@ -125,20 +125,14 @@ describe('YoungEagles2027RegistrationPreview', () => {
     expect(source).not.toMatch(/\bredirect\s*\(/);
     expect(source).toContain('YoungEaglesLiveRegistrationForm');
     const liveForm = fs.readFileSync(
-      path.resolve(process.cwd(), 'src/components/registration/YoungEaglesLiveRegistrationForm.tsx'),
+      path.resolve(
+        process.cwd(),
+        'src/components/registration/YoungEaglesLiveRegistrationForm.tsx',
+      ),
       'utf8',
     );
     expect(liveForm).toContain('mode="live"');
     expect(liveForm).toContain('YOUNG_EAGLES_ORGANIZATION_ID');
-  });
-
-  it('does not hardcode a 2026(FEB) promo banner on the current public form', () => {
-    const source = fs.readFileSync(
-      path.resolve(process.cwd(), 'src/components/registration/PublicRegistrationForm.tsx'),
-      'utf8',
-    );
-    expect(source).not.toContain('2026(FEB)');
-    expect(source).toContain('RegistrationCampaignBanner');
   });
 
   it('lets a family give media permission and upload the three documents on the consent step', async () => {

@@ -2,12 +2,14 @@
 
 import { CheckCircle2, Loader2 } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useMemo, useState } from 'react';
 
 import {
   type RegistrationCampaignView,
   resolveDisplayedRegistrationCampaign,
 } from '@/lib/registration-campaign';
+import type { SubmitYoungEagles2027Result } from '@/lib/submit-public-registration';
 import { submitYoungEagles2027ToServer } from '@/lib/submit-young-eagles-2027-client';
 import {
   initialYoungEagles2027RegistrationState,
@@ -51,7 +53,7 @@ export function YoungEagles2027RegistrationPreview({
   const persistEnabled = mode === 'live' && organizationId === YOUNG_EAGLES_ORGANIZATION_ID;
   const [activeStep, setActiveStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [submission, setSubmission] = useState<SubmitYoungEagles2027Result | null>(null);
   const [submitError, setSubmitError] = useState('');
   const [values, setValues] = useState<YoungEagles2027RegistrationState>(
     initialYoungEagles2027RegistrationState,
@@ -128,8 +130,8 @@ export function YoungEagles2027RegistrationPreview({
     setSubmitting(true);
     setSubmitError('');
     try {
-      await submitYoungEagles2027ToServer(values);
-      setSubmitted(true);
+      const result = await submitYoungEagles2027ToServer(values);
+      setSubmission(result);
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : 'Failed to submit registration. Please try again.',
@@ -139,8 +141,8 @@ export function YoungEagles2027RegistrationPreview({
     }
   }
 
-  if (submitted) {
-    return <SubmittedConfirmation childLegalName={values.childLegalName} />;
+  if (submission) {
+    return <SubmittedConfirmation registration={submission} />;
   }
 
   return (
@@ -160,17 +162,25 @@ export function YoungEagles2027RegistrationPreview({
               <p className="mt-0.5 text-xs text-[#64748b]">Premium early learning &amp; daycare</p>
             </div>
           </div>
-          <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[#d9d0fb] bg-[#f7f3ff] px-3 py-2 text-xs font-extrabold text-[#5d3db3]">
-            <span
-              aria-hidden="true"
-              className="size-2 rounded-full bg-[#7651d6] shadow-[0_0_0_4px_rgba(118,81,214,0.12)]"
-            />
-            {persistEnabled ? '2027 admissions open' : '2027 admissions preview'}
-          </span>
+          <div className="flex shrink-0 items-center gap-4">
+            <Link
+              className="hidden text-xs font-bold text-[#1e4b8f] underline-offset-2 hover:underline sm:inline"
+              href="/registration/status"
+            >
+              Track an application
+            </Link>
+            <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[#d9d0fb] bg-[#f7f3ff] px-3 py-2 text-xs font-extrabold text-[#5d3db3]">
+              <span
+                aria-hidden="true"
+                className="size-2 rounded-full bg-[#7651d6] shadow-[0_0_0_4px_rgba(118,81,214,0.12)]"
+              />
+              {persistEnabled ? '2027 admissions open' : '2027 admissions preview'}
+            </span>
+          </div>
         </header>
 
         <div className="grid gap-7 p-5 sm:p-8 lg:grid-cols-[minmax(0,1.55fr)_minmax(280px,0.85fr)]">
-          <section aria-labelledby="young-eagles-2027-title">
+          <section aria-labelledby="young-eagles-2027-title" className="min-w-0">
             <div className="mb-6">
               <p className="mb-2 text-xs font-black tracking-[0.12em] text-[#7651d6] uppercase">
                 A calmer registration journey
@@ -188,9 +198,7 @@ export function YoungEagles2027RegistrationPreview({
               </p>
             </div>
 
-            {displayedCampaign ? (
-              <RegistrationCampaignBanner campaign={displayedCampaign} />
-            ) : null}
+            {displayedCampaign ? <RegistrationCampaignBanner campaign={displayedCampaign} /> : null}
 
             <YoungEagles2027FeeSchedule />
 

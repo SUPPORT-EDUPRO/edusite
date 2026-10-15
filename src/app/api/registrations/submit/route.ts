@@ -6,6 +6,7 @@ import {
   submitYoungEagles2027Application,
 } from '@/lib/submit-public-registration';
 import { getServiceRoleClient } from '@/lib/supabase';
+import { YOUNG_EAGLES_ORGANIZATION_ID } from '@/lib/young-eagles-registration';
 
 export const dynamic = 'force-dynamic';
 
@@ -45,7 +46,30 @@ export async function POST(request: NextRequest) {
   try {
     // The tenant, fee and campaign are decided on the server; only `values` is read from the body.
     const values = (body as { values?: unknown } | null)?.values;
-    const registration = await submitYoungEagles2027Application(getServiceRoleClient(), values);
+    const supabase = getServiceRoleClient();
+    const registration = await submitYoungEagles2027Application(supabase, values);
+
+    // Staff notification is best effort: a delivery problem must never lose a saved application.
+    try {
+      const { error: notificationError } = await supabase.functions.invoke(
+        'notifications-dispatcher',
+        {
+          body: {
+            event_type: 'child_registration_submitted',
+            preschool_id: YOUNG_EAGLES_ORGANIZATION_ID,
+            registration_id: registration.id,
+            child_name: registration.childName,
+            parent_name: registration.guardianName,
+            send_immediately: true,
+          },
+        },
+      );
+      if (notificationError) {
+        console.error('[Registration notification]', notificationError.message);
+      }
+    } catch (notificationError) {
+      console.error('[Registration notification]', notificationError);
+    }
     return NextResponse.json({ success: true, registration }, { status: 200 });
   } catch (error) {
     if (error instanceof RegistrationInputError) {

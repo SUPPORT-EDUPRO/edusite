@@ -2,19 +2,29 @@ import {
   CalendarDays,
   Check,
   CheckCircle2,
-  CircleHelp,
+  Clock3,
   HeartHandshake,
+  MailCheck,
   ShieldCheck,
+  Upload,
 } from 'lucide-react';
+import Link from 'next/link';
 
+import type { SubmitYoungEagles2027Result } from '@/lib/submit-public-registration';
 import type { YoungEagles2027RegistrationState } from '@/lib/young-eagles-2027-registration';
 import {
   formatSelectedDocument,
   mediaPermissionReviewLabel,
   YOUNG_EAGLES_2027_DOCUMENT_SLOTS,
 } from '@/lib/young-eagles-2027-registration';
+import {
+  YOUNG_EAGLES_AFTERCARE_HOURS,
+  YOUNG_EAGLES_OPERATING_DAYS,
+  YOUNG_EAGLES_SCHOOL_HOURS,
+} from '@/lib/young-eagles-contact';
 
 import { StepHeading } from './youngEagles2027PreviewUi';
+import { YoungEaglesContactCard } from './YoungEaglesContactCard';
 
 export function ReviewAndSubmit({
   persistEnabled,
@@ -74,18 +84,86 @@ export function ReviewAndSubmit({
   );
 }
 
-export function SubmittedConfirmation({ childLegalName }: { childLegalName: string }) {
+export function SubmittedConfirmation({
+  registration,
+}: {
+  registration: SubmitYoungEagles2027Result;
+}) {
+  const feeDue = registration.registrationFeeAmount > 0;
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top_left,_#ece8ff,_transparent_34%),linear-gradient(135deg,_#f7faff,_#f6f2ff)] px-3 py-8 text-[#2b3e5c]">
-      <div className="mx-auto max-w-xl rounded-[28px] border border-white/90 bg-white p-8 text-center shadow-[0_24px_70px_rgba(30,75,143,0.14)]">
+      <div className="mx-auto max-w-2xl rounded-[28px] border border-white/90 bg-white p-6 shadow-[0_24px_70px_rgba(30,75,143,0.14)] sm:p-8">
         <Check className="mx-auto mb-4 size-12 text-[#238265]" />
-        <h1 className="text-3xl font-extrabold tracking-[-0.04em] text-[#172f56]">
+        <h1 className="text-center text-3xl font-extrabold tracking-[-0.04em] text-[#172f56]">
           Registration submitted
         </h1>
-        <p className="mt-4 leading-7 text-[#64748b]">
-          Thank you for registering {childLegalName} for the 2027 academic year at Young Eagles
-          Preschool. Admissions will review your application and contact you.
+        <p className="mt-4 text-center leading-7 text-[#64748b]">
+          Thank you for registering {registration.childName} for the 2027 academic year at Young
+          Eagles Preschool. Your application is safely in the admissions queue.
         </p>
+
+        <section className="mt-6 rounded-2xl border border-[#d9d0fb] bg-[#f8f5ff] p-5 text-center">
+          <p className="text-xs font-black tracking-[0.12em] text-[#7651d6] uppercase">
+            Keep this reference
+          </p>
+          <p className="mt-2 font-mono text-lg font-extrabold break-all text-[#172f56]">
+            {registration.paymentReference}
+          </p>
+          <p className="mt-2 text-sm text-[#64748b]">
+            A confirmation with the next steps is being sent to {registration.guardianEmail}. Check
+            your spam folder if it does not arrive shortly.
+          </p>
+        </section>
+
+        <ol className="mt-6 grid gap-3 text-left text-sm leading-6 text-[#435775]">
+          <li className="flex gap-3 rounded-xl border border-[#e5ebf4] p-4">
+            <MailCheck aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-[#238265]" />
+            <span>
+              <strong className="block text-[#172f56]">1. Check your email</strong>
+              Your confirmation includes the payment instructions and school contact details.
+            </span>
+          </li>
+          <li className="flex gap-3 rounded-xl border border-[#e5ebf4] p-4">
+            <Upload aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-[#7651d6]" />
+            <span>
+              <strong className="block text-[#172f56]">
+                2. {feeDue ? 'Pay and upload proof' : 'No registration payment is due'}
+              </strong>
+              {feeDue
+                ? `The registration fee for this application is R${registration.registrationFeeAmount.toFixed(2)}.`
+                : 'A registration fee waiver was applied to this application.'}
+            </span>
+          </li>
+          <li className="flex gap-3 rounded-xl border border-[#e5ebf4] p-4">
+            <CheckCircle2 aria-hidden="true" className="mt-0.5 size-5 shrink-0 text-[#1e4b8f]" />
+            <span>
+              <strong className="block text-[#172f56]">3. Track the review</strong>
+              Admissions will update the status after reviewing the application and payment.
+            </span>
+          </li>
+        </ol>
+
+        <div className="mt-6">
+          <YoungEaglesContactCard heading="School hours and contact" />
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {feeDue ? (
+            <Link
+              className="rounded-xl bg-[#1e4b8f] px-5 py-3 text-center font-extrabold text-white transition hover:bg-[#173d75]"
+              href={`/upload-payment?ref=${encodeURIComponent(registration.paymentReference)}`}
+            >
+              Upload proof of payment
+            </Link>
+          ) : null}
+          <Link
+            className="rounded-xl border border-[#1e4b8f] px-5 py-3 text-center font-extrabold text-[#1e4b8f] transition hover:bg-[#f2f6fc]"
+            href={`/registration/status?ref=${encodeURIComponent(registration.paymentReference)}`}
+          >
+            Track application
+          </Link>
+        </div>
       </div>
     </main>
   );
@@ -112,7 +190,44 @@ export function RegistrationInfoAside({ persistEnabled }: { persistEnabled: bool
             label="Early learning & daycare"
             value={persistEnabled ? 'Ages 6 months to 6 years' : 'To be confirmed before launch'}
           />
+          <SummaryItem
+            icon={<Clock3 />}
+            label="Operating hours"
+            value={
+              persistEnabled
+                ? `${YOUNG_EAGLES_OPERATING_DAYS}: school day ${YOUNG_EAGLES_SCHOOL_HOURS}, aftercare ${YOUNG_EAGLES_AFTERCARE_HOURS}`
+                : 'To be confirmed before launch'
+            }
+          />
         </dl>
+      </section>
+
+      <section className="rounded-[20px] border border-[#e5ebf4] bg-white/80 p-5">
+        <h2 className="font-extrabold tracking-[-0.015em] text-[#172f56]">What happens next</h2>
+        <ol className="mt-4 grid gap-3 text-sm leading-5 text-[#64748b]">
+          {[
+            'You receive a reference number and a confirmation email straight away.',
+            'Pay the registration fee and send proof of payment (no payment is due if a waiver applies).',
+            'The principal and admissions team are notified and review your application.',
+            'Once approved, you get access to the Young Eagles app for your child.',
+          ].map((item, index) => (
+            <li key={item} className="flex gap-2.5">
+              <span
+                aria-hidden="true"
+                className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-[#edf4fe] text-xs font-extrabold text-[#1e4b8f]"
+              >
+                {index + 1}
+              </span>
+              {item}
+            </li>
+          ))}
+        </ol>
+        <p className="mt-4 text-sm text-[#64748b]">
+          Already applied?{' '}
+          <Link className="font-bold text-[#1e4b8f] underline" href="/registration/status">
+            Track your application
+          </Link>
+        </p>
       </section>
 
       <section className="rounded-[20px] border border-[#e5ebf4] bg-white/80 p-5">
@@ -132,20 +247,9 @@ export function RegistrationInfoAside({ persistEnabled }: { persistEnabled: bool
         </ul>
       </section>
 
-      <section className="flex items-center justify-between gap-4 rounded-2xl bg-[#172f56] p-4 text-white sm:col-span-2 lg:col-span-1">
-        <div>
-          <h2 className="text-sm font-extrabold">Need a hand?</h2>
-          <p className="mt-1 text-xs leading-5 text-[#dce7fa]">
-            {persistEnabled
-              ? 'Admissions will contact you after this application is submitted. You can also continue from the Young Eagles website.'
-              : 'Admissions support details are to be confirmed before launch.'}
-          </p>
-        </div>
-        <CircleHelp
-          aria-hidden="true"
-          className="size-8 shrink-0 rounded-xl border border-white/25 p-1.5"
-        />
-      </section>
+      <div className="sm:col-span-2 lg:col-span-1">
+        <YoungEaglesContactCard heading="Need a hand? Visit or contact us" />
+      </div>
     </aside>
   );
 }
