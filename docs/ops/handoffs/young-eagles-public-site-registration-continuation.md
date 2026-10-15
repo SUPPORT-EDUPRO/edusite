@@ -18,7 +18,7 @@ If work resumes, the next action is content-owner review of the production pages
 
 | Workstream | Checkout | Branch / delivered commit | Status |
 | --- | --- | --- | --- |
-| Public website | `/run/media/vaxon/axon-data/projectx/client/young-eagles-website` | `main` / `c01912d860e3c887acbd1f68a37bf9d19b69ce4d` | Verified and deployed |
+| Public website | `/run/media/vaxon/axon-data/projectx/client/young-eagles-website` | `main` / `1079d62` | Verified and deployed |
 | Registration app | `/tmp/edusitepro-registration-delivery` | `delivery/registration-follow-up` tracking `origin/main`; code commit `e2c50017c66b33892398919c0e740586e8f7f320` | Verified and deployed; this handoff adds a documentation-only commit |
 | Primary EduSitePro checkout | `/run/media/vaxon/axon-data/projectx/product/edusitepro` | divergent local `main` at pickup | Preserved; not used for delivery |
 | Receiving agent | `claude-slot` in the Bridge context | Provider inbox prohibited by operator | Live receipt unavailable; this file is the return handoff |
@@ -31,6 +31,7 @@ No file ownership by another active agent was inferred. Dirty or divergent work 
 
 - Commit `2b3f20f` corrected the address, restored `public/campus/campus-7-improved.png` as the hero, improved programme tiles, migrated ESLint ignores to flat config, and removed 49 tracked modules that were outside the production import graph. The removed files remain recoverable from Git history.
 - Commit `c01912d` made the four homepage value items navigable and added the four data-driven feature pages in `src/pages/FeatureDetail.jsx`.
+- Commit `1079d62` restored the exact operator-requested `Mamelodi community` label on the homepage and feature page.
 - Child photographs remain absent from the gallery pending specific marketing permission. The restored hero photograph was explicitly approved by the operator for this use.
 
 ### Registration app
@@ -44,7 +45,7 @@ No file ownership by another active agent was inferred. Dirty or divergent work 
 
 - `npm run lint` — passed with zero errors and zero warnings.
 - `npm run build` — passed; 77 modules transformed.
-- GitHub commit status for `c01912d` — Vercel `success`, updated `2026-10-15T06:41:10Z`.
+- GitHub commit status for `1079d62` — Vercel `success`, updated `2026-10-15T06:59:45Z`.
 - Production GET checks — `/` and `/care-and-connection` returned HTTP 200.
 - The production JavaScript asset contains the corrected address, all four homepage button labels, and the new feature-page content.
 - Production screenshots were rendered and visually inspected:
