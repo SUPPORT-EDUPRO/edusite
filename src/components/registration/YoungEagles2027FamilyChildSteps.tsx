@@ -12,6 +12,8 @@ export interface YoungEagles2027StepProps {
   siblingHelp?: string;
 }
 
+const digitsOnly = (value: string) => value.replace(/\D/g, '').slice(0, 15);
+
 export function FamilyDetails({
   values,
   updateField,
@@ -51,10 +53,12 @@ export function FamilyDetails({
         <Field label="Mobile number (required)" invalid={isFieldInvalid('mobile')}>
           <input
             autoComplete="tel"
+            inputMode="numeric"
+            pattern="[0-9]*"
             aria-invalid={isFieldInvalid('mobile')}
             className={youngEagles2027InputClassName}
-            onChange={(event) => updateField('mobile', event.target.value)}
-            placeholder="+27 72 000 0000"
+            onChange={(event) => updateField('mobile', digitsOnly(event.target.value))}
+            placeholder="0720000000"
             required
             type="tel"
             value={values.mobile}
@@ -74,12 +78,14 @@ export function FamilyDetails({
             <option>Other caregiver</option>
           </select>
         </Field>
-        <Field label="Alternate contact (optional)">
+        <Field label="Alternate contact number (optional)">
           <input
             autoComplete="tel"
             className={youngEagles2027InputClassName}
-            onChange={(event) => updateField('alternateContact', event.target.value)}
-            placeholder="Name and mobile number"
+            inputMode="numeric"
+            onChange={(event) => updateField('alternateContact', digitsOnly(event.target.value))}
+            pattern="[0-9]*"
+            placeholder="0720000000"
             type="tel"
             value={values.alternateContact}
           />
@@ -105,14 +111,39 @@ export function FamilyDetails({
             value={values.address}
           />
         </Field>
-        <Field label="Emergency contact (optional)" wide>
+        <Field label="Emergency contact name (optional)">
           <input
-            autoComplete="tel"
+            autoComplete="off"
             className={youngEagles2027InputClassName}
             onChange={(event) => updateField('emergencyContact', event.target.value)}
-            placeholder="Name, relationship and mobile number"
-            type="tel"
+            placeholder="Full name"
             value={values.emergencyContact}
+          />
+        </Field>
+        <Field label="Emergency contact relationship (optional)">
+          <input
+            autoComplete="off"
+            className={youngEagles2027InputClassName}
+            onChange={(event) => updateField('emergencyContactRelationship', event.target.value)}
+            placeholder="e.g. Grandmother, Aunt"
+            value={values.emergencyContactRelationship}
+          />
+        </Field>
+        <Field
+          label="Emergency contact number (optional)"
+          invalid={isFieldInvalid('emergencyContactPhone')}
+          wide
+        >
+          <input
+            aria-invalid={isFieldInvalid('emergencyContactPhone')}
+            autoComplete="off"
+            className={youngEagles2027InputClassName}
+            inputMode="numeric"
+            onChange={(event) => updateField('emergencyContactPhone', digitsOnly(event.target.value))}
+            pattern="[0-9]*"
+            placeholder="0720000000"
+            type="tel"
+            value={values.emergencyContactPhone}
           />
         </Field>
         <div className="sm:col-span-2">

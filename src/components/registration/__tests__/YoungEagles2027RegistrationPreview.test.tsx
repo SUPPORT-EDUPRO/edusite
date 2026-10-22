@@ -29,7 +29,7 @@ async function continueToDocuments(user: ReturnType<typeof userEvent.setup>) {
 
   await user.type(screen.getByLabelText('Guardian legal name (required)'), 'Naledi Mokoena');
   await user.type(screen.getByLabelText('Email address (required)'), 'naledi@example.com');
-  await user.type(screen.getByLabelText('Mobile number (required)'), '+27 72 000 0000');
+  await user.type(screen.getByLabelText('Mobile number (required)'), '0720000000');
   await user.selectOptions(screen.getByLabelText('Relationship to child (required)'), 'Parent');
   await user.click(screen.getByRole('button', { name: 'Continue to Child details' }));
 
@@ -80,7 +80,7 @@ describe('YoungEagles2027RegistrationPreview', () => {
     await user.click(screen.getByRole('button', { name: /Family details/ }));
     expect(screen.getByLabelText('Guardian legal name (required)')).toHaveValue('Naledi Mokoena');
     expect(screen.getByLabelText('Email address (required)')).toHaveValue('naledi@example.com');
-    expect(screen.getByLabelText('Mobile number (required)')).toHaveValue('+27 72 000 0000');
+    expect(screen.getByLabelText('Mobile number (required)')).toHaveValue('0720000000');
 
     await user.click(screen.getByRole('button', { name: 'Continue to Child details' }));
     expect(screen.getByLabelText('Child legal name (required)')).toHaveValue('Amahle Mokoena');

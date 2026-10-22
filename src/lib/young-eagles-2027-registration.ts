@@ -52,6 +52,8 @@ export interface YoungEagles2027RegistrationState {
   address: string;
   communicationPreference: string;
   emergencyContact: string;
+  emergencyContactRelationship: string;
+  emergencyContactPhone: string;
   siblingEnrolled: boolean;
   childLegalName: string;
   childPreferredName: string;
@@ -77,6 +79,8 @@ export const initialYoungEagles2027RegistrationState: YoungEagles2027Registratio
   address: '',
   communicationPreference: '',
   emergencyContact: '',
+  emergencyContactRelationship: '',
+  emergencyContactPhone: '',
   siblingEnrolled: false,
   childLegalName: '',
   childPreferredName: '',
@@ -166,6 +170,15 @@ export function validateYoungEagles2027Step(
       return 'Add the parent or guardian’s contact details to continue.';
     }
     if (!/^\S+@\S+\.\S+$/.test(values.email)) return 'Enter a valid email address to continue.';
+    if (!/^\d{9,15}$/.test(values.mobile)) return 'Enter the mobile number using digits only (9 to 15 digits).';
+    for (const phone of [values.alternateContact, values.emergencyContactPhone]) {
+      if (phone && !/^\d{9,15}$/.test(phone)) {
+        return 'Contact numbers must be digits only (9 to 15 digits).';
+      }
+    }
+    if (values.emergencyContactPhone && !values.emergencyContact.trim()) {
+      return 'Add the emergency contact’s name along with their number.';
+    }
   }
 
   if (

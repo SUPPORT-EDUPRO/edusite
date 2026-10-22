@@ -75,6 +75,8 @@ export function buildYoungEagles2027RegistrationRow(input: PersistYoungEagles202
       student_last_name: child.lastName,
       student_dob: input.values.childDateOfBirth,
       emergency_contact_name: input.values.emergencyContact.trim() || null,
+      emergency_contact_phone: input.values.emergencyContactPhone.trim() || null,
+      emergency_contact_relation: input.values.emergencyContactRelationship.trim() || null,
       preferred_start_date: defaultPreferredStartDate(),
       special_requests: [
         input.values.intendedStart,
